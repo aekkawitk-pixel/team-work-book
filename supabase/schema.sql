@@ -34,6 +34,8 @@ create table public.requesters (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
+  department text not null default '',
+  position text not null default '',
   active boolean not null default true,
   sort_order int not null default 0,
   created_at timestamptz not null default now()

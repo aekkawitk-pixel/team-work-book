@@ -55,6 +55,135 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
 function initials(n){n=(n||"").trim();return n?n.slice(0,2):"?";}
 function byId(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return arr[i];return null;}
 function uniq(a){var s={},o=[];a.forEach(function(x){if(x&&!s[x]){s[x]=1;o.push(x);}});return o;}
+function normName(s){return (s||"").replace(/\s+/g," ").trim();}
+
+/* ==========================================================
+   2.5 นำเข้ารายชื่อผู้มอบหมายงานจากไฟล์ (.xlsx / .csv / .tsv)
+   ========================================================== */
+function parseRequesterFile(file){
+  var isXlsx=/\.xlsx$/i.test(file.name)||file.type.indexOf("spreadsheet")>=0;
+  if(isXlsx)return file.arrayBuffer().then(parseXlsxRequesters);
+  return file.text().then(parseDelimitedRequesters);
+}
+function parseDelimitedRequesters(text){
+  var lines=text.replace(/\r/g,"").split("\n").filter(function(l){return l.trim()!=="";});
+  if(!lines.length)return [];
+  var delim=lines[0].indexOf("\t")>=0?"\t":",";
+  var rows=lines.map(function(l){return l.split(delim).map(function(c){
+    return c.replace(/^"|"$/g,"").trim();});});
+  return rowsToRequesters(rows);
+}
+function rowsToRequesters(rows){
+  if(!rows.length)return [];
+  var head=rows[0].map(function(h){return (h||"").trim();});
+  var iName=-1,iDept=-1,iPos=-1;
+  head.forEach(function(h,i){
+    if(iName<0&&h.indexOf("ชื่อ")>=0)iName=i;
+    if(iDept<0&&h.indexOf("แผนก")>=0)iDept=i;
+    if(iPos<0&&h.indexOf("ตำแหน่ง")>=0)iPos=i;
+  });
+  var start=1;
+  if(iName<0){iName=0;iDept=1;iPos=2;start=0;}
+  var out=[];
+  for(var i=start;i<rows.length;i++){
+    var row=rows[i];
+    var name=normName(row[iName]||"");
+    if(!name)continue;
+    out.push({name:name,department:iDept>=0?(row[iDept]||"").trim():"",
+      position:iPos>=0?(row[iPos]||"").trim():""});
+  }
+  return out;
+}
+/* ---- xlsx = zip + xml — อ่านชีตแรกโดยไม่พึ่งไลบรารีภายนอก ---- */
+function bytesToStr(bytes){return new TextDecoder("utf-8").decode(bytes);}
+function xmlDecode(s){
+  return (s||"").replace(/&#x([0-9a-fA-F]+);/g,function(_,h){return String.fromCodePoint(parseInt(h,16));})
+    .replace(/&#(\d+);/g,function(_,d){return String.fromCodePoint(parseInt(d,10));})
+    .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"')
+    .replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+}
+function colToIndex(letters){
+  var n=0;
+  for(var i=0;i<letters.length;i++)n=n*26+(letters.charCodeAt(i)-64);
+  return n-1;
+}
+function parseSharedStrings(xml){
+  var out=[],siRe=/<si[^>]*>([\s\S]*?)<\/si>/g,m;
+  while((m=siRe.exec(xml))){
+    var t="",tRe=/<t[^>]*>([\s\S]*?)<\/t>/g,tm;
+    while((tm=tRe.exec(m[1])))t+=tm[1];
+    out.push(xmlDecode(t));
+  }
+  return out;
+}
+function parseSheetXml(xml,sst){
+  var rows=[],rowRe=/<row\b[^>]*>([\s\S]*?)<\/row>/g,rm;
+  var cellRe=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+  while((rm=rowRe.exec(xml))){
+    var cells=[],cm;
+    cellRe.lastIndex=0;
+    while((cm=cellRe.exec(rm[1]))){
+      var attrs=cm[1],content=cm[2]||"";
+      var rMatch=/r="([A-Z]+)\d+"/.exec(attrs);
+      var col=rMatch?colToIndex(rMatch[1]):cells.length;
+      var tMatch=/t="([^"]+)"/.exec(attrs),type=tMatch?tMatch[1]:"",val="";
+      if(type==="inlineStr"){
+        var isM=/<is>([\s\S]*?)<\/is>/.exec(content);
+        if(isM){var tR=/<t[^>]*>([\s\S]*?)<\/t>/g,tm2,acc="";
+          while((tm2=tR.exec(isM[1])))acc+=tm2[1];
+          val=xmlDecode(acc);}
+      }else{
+        var vM=/<v>([\s\S]*?)<\/v>/.exec(content),raw=vM?vM[1]:"";
+        val=type==="s"?(sst[parseInt(raw,10)]||""):xmlDecode(raw);
+      }
+      cells[col]=val;
+    }
+    var out=[];
+    for(var i=0;i<cells.length;i++)out[i]=cells[i]||"";
+    rows.push(out);
+  }
+  return rows;
+}
+function extractZipEntry(u8,entry){
+  var dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  var lp=entry.localOffset;
+  var nameLen=dv.getUint16(lp+26,true),extraLen=dv.getUint16(lp+28,true);
+  var dataStart=lp+30+nameLen+extraLen;
+  var data=u8.subarray(dataStart,dataStart+entry.compSize);
+  if(entry.method===0)return Promise.resolve(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength));
+  var stream=new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Response(stream).arrayBuffer();
+}
+function parseXlsxRequesters(buf){
+  var u8=new Uint8Array(buf),dv=new DataView(buf);
+  var eocd=-1,minI=Math.max(0,u8.length-22-65557);
+  for(var i=u8.length-22;i>=minI;i--){
+    if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  }
+  if(eocd<0)throw new Error("ไม่ใช่ไฟล์ xlsx ที่ถูกต้อง");
+  var cdOffset=dv.getUint32(eocd+16,true),cdCount=dv.getUint16(eocd+10,true);
+  var entries={},p=cdOffset;
+  for(var e=0;e<cdCount;e++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    var method=dv.getUint16(p+10,true),compSize=dv.getUint32(p+20,true);
+    var nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),commentLen=dv.getUint16(p+32,true);
+    var lho=dv.getUint32(p+42,true);
+    var name=bytesToStr(u8.subarray(p+46,p+46+nameLen));
+    entries[name]={method:method,compSize:compSize,localOffset:lho};
+    p+=46+nameLen+extraLen+commentLen;
+  }
+  var sheetName=Object.keys(entries).filter(function(n){
+    return /^xl\/worksheets\/sheet\d+\.xml$/.test(n);}).sort()[0];
+  if(!sheetName)throw new Error("ไม่พบชีตข้อมูลในไฟล์");
+  return Promise.all([
+    extractZipEntry(u8,entries[sheetName]),
+    entries["xl/sharedStrings.xml"]?extractZipEntry(u8,entries["xl/sharedStrings.xml"]):Promise.resolve(null)
+  ]).then(function(r){
+    var sheetXml=bytesToStr(new Uint8Array(r[0]));
+    var sst=r[1]?parseSharedStrings(bytesToStr(new Uint8Array(r[1]))):[];
+    return rowsToRequesters(parseSheetXml(sheetXml,sst));
+  });
+}
 
 /* ==========================================================
    3. ข้อมูล
@@ -78,7 +207,7 @@ function normalize(db){
     if(!Array.isArray(db[k]))db[k]=[];});
   db.weeks=db.weeks||{};
   db.members.forEach(function(m){m.nickname=m.nickname||"";m.active=m.active!==false;});
-  db.requesters.forEach(function(x){x.active=x.active!==false;});
+  db.requesters.forEach(function(x){x.active=x.active!==false;x.department=x.department||"";x.position=x.position||"";});
   db.projects.forEach(function(p){p.description=p.description||"";p.status=p.status||"active";
     p.startAt=p.startAt||"";p.endAt=p.endAt||"";p.archived=!!p.archived;});
   db.tasks.forEach(function(t){
@@ -182,7 +311,8 @@ function fromISO(iso){
 /* ---------- รูปแบบแถวของแต่ละตาราง ---------- */
 function rowMember(m,i){return {id:m.id,owner_id:UID,name:m.name,nickname:m.nickname||"",
   active:m.active!==false,is_self:m.id===SELF,sort_order:i};}
-function rowRequester(r,i){return {id:r.id,owner_id:UID,name:r.name,active:r.active!==false,sort_order:i};}
+function rowRequester(r,i){return {id:r.id,owner_id:UID,name:r.name,department:r.department||"",
+  position:r.position||"",active:r.active!==false,sort_order:i};}
 function rowProject(p,i){return {id:p.id,owner_id:UID,name:p.name,description:p.description||"",
   status:p.status||"active",start_at:p.startAt||null,end_at:p.endAt||null,
   archived:!!p.archived,sort_order:i};}
@@ -1305,8 +1435,9 @@ function renderSettings(){
     }).join(""):'<div class="dim" style="font-size:13.5px">ยังไม่มีสมาชิก กด “＋ เพิ่มสมาชิก”</div>';
   $("requester-list").innerHTML=DB.requesters.length?DB.requesters.map(function(r,i){
     var n=DB.tasks.filter(function(t){return t.requesterId===r.id;}).length;
+    var meta=[r.department,r.position].filter(Boolean).join(" · ");
     return '<div class="'+(r.active===false?"off":"")+'"><div class="nm"><b>'+esc(r.name)+
-      '</b><span>· '+n+" งาน"+(r.active===false?" · ไม่ใช้งาน":"")+"</span></div>"+
+      '</b><span>'+(meta?esc(meta)+" · ":"")+n+" งาน"+(r.active===false?" · ไม่ใช้งาน":"")+"</span></div>"+
       '<button class="btn sm gh" data-act="mvr" data-id="'+r.id+'" data-d="-1">↑</button>'+
       '<button class="btn sm gh" data-act="mvr" data-id="'+r.id+'" data-d="1">↓</button>'+
       '<button class="btn sm gh" data-act="edr" data-id="'+r.id+'">แก้ไข</button>'+
@@ -1444,9 +1575,11 @@ document.addEventListener("click",function(e){
     }
     openForm("แก้ไขผู้มอบหมายงาน",[
       {key:"name",label:"ชื่อ",type:"text",value:r.name},
+      {key:"department",label:"แผนก",type:"text",value:r.department||""},
+      {key:"position",label:"ตำแหน่ง",type:"text",value:r.position||""},
       {key:"active",label:"ใช้งานอยู่",type:"toggle",value:r.active!==false}],
-      function(v){if(!v.name)return false;r.name=v.name;r.active=v.active;
-        touch();renderAll();toast("บันทึกแล้ว");return true;});
+      function(v){if(!v.name)return false;r.name=v.name;r.department=v.department;r.position=v.position;
+        r.active=v.active;touch();renderAll();toast("บันทึกแล้ว");return true;});
     return;
   }
   if(a==="edp"||a==="rmp"||a==="arp"){
@@ -1559,10 +1692,36 @@ $("add-member").addEventListener("click",function(){
       DB.members.push({id:uid(),name:v.name,nickname:v.nickname,active:true});
       touch();renderAll();toast("เพิ่มสมาชิกแล้ว");return true;});});
 $("add-requester").addEventListener("click",function(){
-  openForm("เพิ่มผู้มอบหมายงาน",[{key:"name",label:"ชื่อ",type:"text",value:""}],
+  openForm("เพิ่มผู้มอบหมายงาน",[
+    {key:"name",label:"ชื่อ",type:"text",value:""},
+    {key:"department",label:"แผนก (ไม่ใส่ก็ได้)",type:"text",value:""},
+    {key:"position",label:"ตำแหน่ง (ไม่ใส่ก็ได้)",type:"text",value:""}],
     function(v){if(!v.name)return false;
-      DB.requesters.push({id:uid(),name:v.name,active:true});
+      DB.requesters.push({id:uid(),name:v.name,department:v.department,position:v.position,active:true});
       touch();renderAll();toast("เพิ่มแล้ว");return true;});});
+$("import-requesters").addEventListener("click",function(){$("requester-import-file").click();});
+$("requester-import-file").addEventListener("change",function(){
+  var f=this.files&&this.files[0];this.value="";if(!f)return;
+  parseRequesterFile(f).then(function(list){
+    if(!list.length){toast("ไม่พบรายชื่อในไฟล์");return;}
+    var added=0,updated=0;
+    list.forEach(function(item){
+      var nm=normName(item.name);if(!nm)return;
+      var ex=DB.requesters.filter(function(r){return normName(r.name)===nm;})[0];
+      if(ex){
+        if(item.department)ex.department=item.department;
+        if(item.position)ex.position=item.position;
+        updated++;
+      }else{
+        DB.requesters.push({id:uid(),name:nm,department:item.department||"",
+          position:item.position||"",active:true});
+        added++;
+      }
+    });
+    touch();renderAll();
+    toast("นำเข้าแล้ว — เพิ่มใหม่ "+added+" คน อัปเดต "+updated+" คน");
+  }).catch(function(err){toast("อ่านไฟล์ไม่สำเร็จ: "+(err&&err.message||err));});
+});
 $("add-project").addEventListener("click",function(){
   openForm("เพิ่มโครงการ",[
     {key:"name",label:"ชื่อโครงการ",type:"text",value:""},
@@ -1683,7 +1842,8 @@ function rebuild(rows){
       isSelf:!!m.is_self});
   });
   db.requesters=(rows.requesters||[]).map(function(r){
-    return {id:r.id,name:r.name,active:r.active!==false};});
+    return {id:r.id,name:r.name,department:r.department||"",position:r.position||"",
+      active:r.active!==false};});
   db.projects=(rows.projects||[]).map(function(p){
     return {id:p.id,name:p.name,description:p.description||"",status:p.status||"active",
       startAt:p.start_at||"",endAt:p.end_at||"",archived:!!p.archived};});
