@@ -499,7 +499,9 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
         <div id="today-list"></div>
       </div>
       <div class="sec">
-        <div class="sec-h"><h2>บันทึกของฉัน</h2><span class="hint">สิ่งที่ทำเองวันนี้ ที่ไม่ได้อยู่ในงานของใคร</span></div>
+        <div class="sec-h"><h2>บันทึกของฉัน</h2><div style="display:flex;align-items:center;gap:10px">
+          <span class="hint">สิ่งที่ทำเองวันนี้ ที่ไม่ได้อยู่ในงานของใคร</span>
+          <button class="btn sm gh" id="notes-all-btn">ดูทั้งหมด</button></div></div>
         <div class="card pad" style="display:grid;gap:11px">
           <textarea id="note-text" placeholder="เช่น ประชุม kickoff กับฝ่ายการตลาด 1 ชม."></textarea>
           <div class="g2 keep2">
@@ -741,6 +743,15 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
     <div class="ph"><h2>รายละเอียดงาน</h2><button class="x" data-close>✕</button></div>
     <div class="pb" id="detail-body"></div>
     <div class="pf split" id="detail-foot"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-notes" hidden>
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="ph"><h2>บันทึกทั้งหมด</h2><button class="x" data-close>✕</button></div>
+    <div class="pb" id="notes-all-list"></div>
+    <div class="pf"><button class="btn gh" data-close>ปิด</button></div>
   </div>
 </div>
 

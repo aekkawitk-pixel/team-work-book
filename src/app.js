@@ -957,6 +957,18 @@ function renderToday(){
         '<button class="btn sm gh" data-act="delnote" data-id="'+n.id+'">ลบ</button></li>';
       }).join("")+"</ul>":"";
 }
+function noteRow(n){
+  return '<li style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">'+
+    '<div class="when">'+fmtD(n.date)+(n.projectId?" · "+esc(projName(n.projectId)):"")+"</div>"+
+    '<div class="msg">'+esc(n.text)+"</div></div>"+
+    '<button class="btn sm gh" data-act="delnote" data-id="'+n.id+'">ลบ</button></li>';
+}
+function renderNotesAll(){
+  var list=DB.notes.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
+  $("notes-all-list").innerHTML=list.length?'<ul class="tl">'+list.map(noteRow).join("")+"</ul>":
+    '<div class="dim" style="font-size:13.5px">ยังไม่มีบันทึก</div>';
+}
+$("notes-all-btn").addEventListener("click",function(){renderNotesAll();openOv("ov-notes");});
 function st(n,label,cls){
   return '<div class="st'+(cls?" "+cls:"")+'"><b>'+n+"</b><span>"+esc(label)+"</span></div>";
 }
@@ -1538,7 +1550,7 @@ document.addEventListener("click",function(e){
     $("q").value="";renderTasks();return;
   }
   if(a==="delnote"){DB.notes=DB.notes.filter(function(n){return n.id!==id;});
-    touch();renderToday();return;}
+    touch();renderToday();renderNotesAll();return;}
   /* --- settings --- */
   if(a==="edm"||a==="rmm"){
     var m=byId(DB.members,id);if(!m)return;
