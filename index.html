@@ -1026,7 +1026,8 @@ function normalize(db){
   ["members","requesters","projects","tasks","notes"].forEach(function(k){
     if(!Array.isArray(db[k]))db[k]=[];});
   db.weeks=db.weeks||{};
-  db.members.forEach(function(m){m.nickname=m.nickname||"";m.active=m.active!==false;});
+  db.members.forEach(function(m){m.nickname=m.nickname||"";m.active=m.active!==false;
+    m.department=m.department||"";m.position=m.position||"";});
   db.requesters.forEach(function(x){x.active=x.active!==false;x.department=x.department||"";x.position=x.position||"";});
   db.projects.forEach(function(p){p.description=p.description||"";p.status=p.status||"active";
     p.startAt=p.startAt||"";p.endAt=p.endAt||"";p.archived=!!p.archived;});
@@ -1130,6 +1131,7 @@ function fromISO(iso){
 }
 /* ---------- รูปแบบแถวของแต่ละตาราง ---------- */
 function rowMember(m,i){return {id:m.id,owner_id:UID,name:m.name,nickname:m.nickname||"",
+  department:m.department||"",position:m.position||"",
   active:m.active!==false,is_self:m.id===SELF,sort_order:i};}
 function rowRequester(r,i){return {id:r.id,owner_id:UID,name:r.name,department:r.department||"",
   position:r.position||"",active:r.active!==false,sort_order:i};}
@@ -2247,9 +2249,10 @@ function renderSettings(){
   var mlist=DB.members.filter(function(m){return !m.isSelf;});
   $("member-list").innerHTML=mlist.length?mlist.map(function(m,i){
     var n=DB.tasks.filter(function(t){return t.ownerId===m.id&&isOpen(t);}).length;
+    var meta=[m.department,m.position].filter(Boolean).join(" · ");
     return '<div class="'+(m.active===false?"off":"")+'"><div class="nm"><b>'+esc(m.name)+"</b>"+
       (m.nickname?'<span>'+esc(m.nickname)+"</span>":"")+
-      '<span>· งานค้าง '+n+(m.active===false?" · ไม่ใช้งาน":"")+"</span></div>"+
+      '<span>'+(meta?esc(meta)+" · ":"")+"งานค้าง "+n+(m.active===false?" · ไม่ใช้งาน":"")+"</span></div>"+
       '<button class="btn sm gh" data-act="edm" data-id="'+m.id+'">แก้ไข</button>'+
       '<button class="btn sm gh" data-act="rmm" data-id="'+m.id+'">ลบ</button></div>';
     }).join(""):'<div class="dim" style="font-size:13.5px">ยังไม่มีสมาชิก กด “＋ เพิ่มสมาชิก”</div>';
@@ -2372,10 +2375,12 @@ document.addEventListener("click",function(e){
     openForm("แก้ไขสมาชิก",[
       {key:"name",label:"ชื่อ",type:"text",value:m.name},
       {key:"nickname",label:"ชื่อเล่น",type:"text",value:m.nickname},
+      {key:"department",label:"แผนก",type:"text",value:m.department||""},
+      {key:"position",label:"ตำแหน่ง",type:"text",value:m.position||""},
       {key:"active",label:"ใช้งานอยู่",type:"toggle",value:m.active!==false}],
       function(v){if(!v.name)return false;
-        m.name=v.name;m.nickname=v.nickname;m.active=v.active;
-        touch();renderAll();toast("บันทึกแล้ว");return true;});
+        m.name=v.name;m.nickname=v.nickname;m.department=v.department;m.position=v.position;
+        m.active=v.active;touch();renderAll();toast("บันทึกแล้ว");return true;});
     return;
   }
   if(a==="edr"||a==="rmr"||a==="mvr"){
@@ -2508,9 +2513,12 @@ $("theme-seg").addEventListener("click",function(e){
 $("add-member").addEventListener("click",function(){
   openForm("เพิ่มสมาชิก",[
     {key:"name",label:"ชื่อ",type:"text",value:""},
-    {key:"nickname",label:"ชื่อเล่น (ไม่ใส่ก็ได้)",type:"text",value:""}],
+    {key:"nickname",label:"ชื่อเล่น (ไม่ใส่ก็ได้)",type:"text",value:""},
+    {key:"department",label:"แผนก (ไม่ใส่ก็ได้)",type:"text",value:""},
+    {key:"position",label:"ตำแหน่ง (ไม่ใส่ก็ได้)",type:"text",value:""}],
     function(v){if(!v.name)return false;
-      DB.members.push({id:uid(),name:v.name,nickname:v.nickname,active:true});
+      DB.members.push({id:uid(),name:v.name,nickname:v.nickname,department:v.department,
+        position:v.position,active:true});
       touch();renderAll();toast("เพิ่มสมาชิกแล้ว");return true;});});
 $("add-requester").addEventListener("click",function(){
   openForm("เพิ่มผู้มอบหมายงาน",[
@@ -2660,6 +2668,7 @@ function rebuild(rows){
   (rows.members||[]).forEach(function(m){
     if(m.is_self){selfRow=m;SELF=m.id;}
     db.members.push({id:m.id,name:m.name,nickname:m.nickname||"",active:m.active!==false,
+      department:m.department||"",position:m.position||"",
       isSelf:!!m.is_self});
   });
   db.requesters=(rows.requesters||[]).map(function(r){

@@ -22,6 +22,8 @@ create table public.members (
   owner_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   nickname text not null default '',
+  department text not null default '',
+  position text not null default '',
   active boolean not null default true,
   is_self boolean not null default false,
   sort_order int not null default 0,
