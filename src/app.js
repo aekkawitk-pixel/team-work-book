@@ -1433,6 +1433,7 @@ function renderSettings(){
       '<button class="btn sm gh" data-act="edm" data-id="'+m.id+'">แก้ไข</button>'+
       '<button class="btn sm gh" data-act="rmm" data-id="'+m.id+'">ลบ</button></div>';
     }).join(""):'<div class="dim" style="font-size:13.5px">ยังไม่มีสมาชิก กด “＋ เพิ่มสมาชิก”</div>';
+  $("requester-count").textContent=DB.requesters.length?"("+DB.requesters.length+" คน)":"";
   $("requester-list").innerHTML=DB.requesters.length?DB.requesters.map(function(r,i){
     var n=DB.tasks.filter(function(t){return t.requesterId===r.id;}).length;
     var meta=[r.department,r.position].filter(Boolean).join(" · ");
