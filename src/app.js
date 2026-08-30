@@ -804,6 +804,7 @@ function openUpdate(id){
   uid_=id;uStatus=t.status;
   $("u-task").textContent=t.title;
   $("u-msg").value="";
+  $("u-date").value=today();
   renderUStatus();
   openOv("ov-update");
   setTimeout(function(){$("u-msg").focus();},80);
@@ -822,10 +823,12 @@ $("u-save").addEventListener("click",function(){
   var msg=$("u-msg").value.trim();
   if(!msg&&uStatus===t.status){toast("พิมพ์ความคืบหน้า หรือเปลี่ยนสถานะก่อน");return;}
   var closing=(uStatus==="completed"&&t.status!=="completed");
+  var uDate=$("u-date").value||today();
+  var now=new Date(),uStamp=uDate+"T"+d2(now.getHours())+":"+d2(now.getMinutes());
   t.updates.push({id:uid(),taskId:t.id,message:msg||("เปลี่ยนสถานะเป็น "+STATUS[uStatus]),
-    status:uStatus,createdAt:nowStamp()});
+    status:uStatus,createdAt:uStamp});
   t.status=uStatus;t.updatedAt=nowStamp();
-  if(uStatus==="completed"){if(!t.completedAt)t.completedAt=today();}
+  if(uStatus==="completed"){if(!t.completedAt)t.completedAt=uDate;}
   else t.completedAt="";
   var made=closing?spawnNext(t):null;
   closeOv("ov-update");
