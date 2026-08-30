@@ -237,18 +237,26 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
   justify-content:center;color:#fff;font-weight:700;font-size:13px;flex:none}
 .tile .minfo{min-width:0}
 .tile .role{font-size:12px;color:var(--ink-3);margin-top:-2px}
-#team-grid .cnt span{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px}
-#team-grid .cnt b{display:inline;font-family:"IBM Plex Mono",monospace;font-size:15px;
+#team-grid .cnt span,#proj-grid .cnt span{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px}
+#team-grid .cnt b,#proj-grid .cnt b{display:inline;font-family:"IBM Plex Mono",monospace;font-size:15px;
   font-weight:600;color:var(--ink)}
-#team-grid .cnt svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;
+#team-grid .cnt svg,#proj-grid .cnt svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round;flex:none;color:var(--ink-3)}
-#team-grid .cnt .h svg{color:var(--hot)}
-#team-grid .cnt .w svg{color:var(--warn)}
+#team-grid .cnt .h svg,#proj-grid .cnt .h svg{color:var(--hot)}
+#team-grid .cnt .w svg,#proj-grid .cnt .w svg{color:var(--warn)}
+#proj-grid .cnt{grid-template-columns:repeat(3,1fr)}
+
 .grid.list-view{grid-template-columns:1fr}
-.list-view .tile{flex-direction:row;align-items:center;gap:16px}
-.list-view .tile .mhead{flex:1;min-width:0}
-.list-view .tile .cnt{grid-template-columns:repeat(4,auto);gap:6px 22px;flex:none}
-.list-view .tile .sub{display:none}
+#team-grid.list-view .tile{flex-direction:row;align-items:center;gap:16px}
+#team-grid.list-view .tile .mhead{flex:1;min-width:0}
+#team-grid.list-view .tile .cnt{grid-template-columns:repeat(4,auto);gap:6px 22px;flex:none}
+#team-grid.list-view .tile .sub{display:none}
+
+#proj-grid.list-view .tile{flex-direction:row;align-items:center;gap:16px}
+#proj-grid.list-view .tile h3{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#proj-grid.list-view .tile .bar{display:none}
+#proj-grid.list-view .tile .barline{flex:none;width:110px}
+#proj-grid.list-view .tile .cnt{grid-template-columns:repeat(3,auto);gap:6px 18px;flex:none}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .barline{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2)}
 
@@ -448,9 +456,13 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
   .row{grid-template-columns:1fr}
   .row .rr{flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap}
   .grid{grid-template-columns:1fr}
-  .list-view .tile{flex-direction:column;align-items:stretch}
-  .list-view .tile .cnt{grid-template-columns:repeat(2,1fr)}
-  .list-view .tile .sub{display:block}
+  #team-grid.list-view .tile{flex-direction:column;align-items:stretch}
+  #team-grid.list-view .tile .cnt{grid-template-columns:repeat(2,1fr)}
+  #team-grid.list-view .tile .sub{display:block}
+  #proj-grid.list-view .tile{flex-direction:column;align-items:stretch}
+  #proj-grid.list-view .tile .bar{display:block}
+  #proj-grid.list-view .tile .barline{width:auto}
+  #proj-grid.list-view .tile .cnt{grid-template-columns:repeat(3,1fr)}
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   .strip{gap:12px 22px;padding:13px 15px}
   .strip .st b{font-size:22px}
@@ -593,7 +605,28 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
 
     <!-- ══════════ โครงการ ══════════ -->
     <section id="v-projects" hidden>
-      <div class="head sec"><h1>โครงการ</h1><p class="muted">โครงการไหนเดินหน้า โครงการไหนกำลังมีปัญหา</p></div>
+      <div class="head sec">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+          <div><h1>โครงการ</h1><p class="muted">โครงการไหนเดินหน้า โครงการไหนกำลังมีปัญหา</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div class="searchbar" style="margin:0;width:200px;max-width:100%"><span class="mg">⌕</span>
+              <input type="search" id="proj-q" placeholder="ค้นหาโครงการ"></div>
+            <select id="proj-show-all" class="btn sm gh" style="width:auto;max-width:100%">
+              <option value="active">ไม่รวมเก็บเข้าคลัง</option>
+              <option value="all">ทั้งหมด (รวมเก็บเข้าคลัง)</option>
+            </select>
+            <select id="proj-sort" class="btn sm gh" style="width:auto;max-width:100%">
+              <option value="name-asc">เรียง: ชื่อ A-Z</option>
+              <option value="name-desc">เรียง: ชื่อ Z-A</option>
+            </select>
+            <div class="seg" id="proj-view-seg">
+              <button type="button" data-view="grid" aria-pressed="true" title="มุมมองการ์ด">▦</button>
+              <button type="button" data-view="list" aria-pressed="false" title="มุมมองแถว">☰</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-row" id="proj-kpi"></div>
       <div class="grid" id="proj-grid"></div>
     </section>
 
@@ -2054,25 +2087,52 @@ function renderMemberDetail(){
 /* ==========================================================
    17. หน้าโครงการ
    ========================================================== */
+var projQ="",projSort="name-asc",projView="grid",projShowAll=false;
 function projStats(id){
   var arr=DB.tasks.filter(function(t){return (t.projectId||"")===id;});
   var done=arr.filter(function(t){return t.status==="completed";}).length;
+  var ws=weekStart(today()),we=addD(ws,6);
   return {all:arr.length,done:done,
     doing:arr.filter(function(t){return t.status==="in_progress";}).length,
     blocked:arr.filter(isStuck).length,
     late:arr.filter(isLate).length,
+    doneWeek:arr.filter(function(t){return t.status==="completed"&&t.completedAt>=ws&&t.completedAt<=we;}).length,
     pct:arr.length?Math.round(done*100/arr.length):0,
     tasks:arr};
 }
+function projList(){
+  var base=(projShowAll?DB.projects.slice():liveProjects());
+  var q=projQ.trim().toLowerCase();
+  if(q)base=base.filter(function(p){return (p.name||"").toLowerCase().indexOf(q)>=0;});
+  base.sort(function(a,b){
+    var r=a.name<b.name?-1:a.name>b.name?1:0;
+    return projSort==="name-desc"?-r:r;
+  });
+  return base;
+}
+function renderProjKpis(ids){
+  var doing=0,late=0,stuck=0,doneWeek=0;
+  ids.forEach(function(id){var s=projStats(id);doing+=s.doing;late+=s.late;stuck+=s.blocked;doneWeek+=s.doneWeek;});
+  $("proj-kpi").innerHTML=[
+    ["doing",doing,"กำลังทำทั้งหมด"],["late",late,"เลยกำหนดทั้งหมด"],
+    ["stuck",stuck,"ติดปัญหาทั้งหมด"],["due",doneWeek,"เสร็จสัปดาห์นี้"]
+  ].map(function(k){return '<div class="kpi-card"><div class="ic '+k[0]+'">'+ICONS[k[0]]+"</div>"+
+    "<div><b>"+k[1]+"</b><span>"+k[2]+"</span></div></div>";}).join("");
+}
 function renderProjects(){
   if(sub&&sub.type==="project"){renderProjectDetail();return;}
-  var list=liveProjects().slice();
-  var hasNone=DB.tasks.some(function(t){return !t.projectId;});
+  var list=projList();
+  var q=projQ.trim().toLowerCase();
+  var hasNone=DB.tasks.some(function(t){return !t.projectId;})&&
+    (!q||"งานที่ไม่ระบุโครงการ".toLowerCase().indexOf(q)>=0);
+  renderProjKpis(list.map(function(p){return p.id;}).concat(hasNone?[""]:[]));
+  $("proj-grid").className="grid"+(projView==="list"?" list-view":"");
   var cards=list.map(function(p){return projCard(p.id,p.name);});
   if(hasNone)cards.push(projCard("","งานที่ไม่ระบุโครงการ"));
   $("proj-grid").innerHTML=cards.length?cards.join("")
-    :'<div style="grid-column:1/-1">'+emptyHTML("ยังไม่มีโครงการ",
-      "เพิ่มโครงการได้ที่หน้าตั้งค่า หรือกดเพิ่มตอนสร้างงานใหม่")+"</div>";
+    :'<div style="grid-column:1/-1">'+emptyHTML(
+      DB.projects.length?"ไม่พบโครงการตามคำค้นหา":"ยังไม่มีโครงการ",
+      DB.projects.length?"ลองล้างคำค้นหาหรือตัวกรอง":"เพิ่มโครงการได้ที่หน้าตั้งค่า หรือกดเพิ่มตอนสร้างงานใหม่")+"</div>";
 }
 function projCard(id,name){
   var s=projStats(id);
@@ -2080,10 +2140,19 @@ function projCard(id,name){
     "<h3>"+esc(name)+"</h3>"+
     '<div class="bar"><i style="width:'+s.pct+'%"></i></div>'+
     '<div class="barline"><span>เสร็จ '+s.done+" / "+s.all+"</span><span>"+s.pct+"%</span></div>"+
-    '<div class="cnt"><span><b>'+s.doing+"</b>กำลังทำ</span>"+
-      '<span class="w"><b>'+s.blocked+"</b>ติดปัญหา</span>"+
-      '<span class="h"><b>'+s.late+"</b>เลยกำหนด</span></div></button>";
+    '<div class="cnt"><span>'+ICONS.doing+"<b>"+s.doing+"</b>กำลังทำ</span>"+
+      '<span class="w">'+ICONS.stuck+"<b>"+s.blocked+"</b>ติดปัญหา</span>"+
+      '<span class="h">'+ICONS.late+"<b>"+s.late+"</b>เลยกำหนด</span></div></button>";
 }
+$("proj-q").addEventListener("input",function(){projQ=this.value;renderProjects();});
+$("proj-sort").addEventListener("change",function(){projSort=this.value;renderProjects();});
+$("proj-show-all").addEventListener("change",function(){projShowAll=this.value==="all";renderProjects();});
+$("proj-view-seg").addEventListener("click",function(e){
+  var b=e.target.closest("[data-view]");if(!b)return;
+  projView=b.dataset.view;
+  Array.prototype.forEach.call(this.children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+  renderProjects();
+});
 function renderProjectDetail(){
   var id=sub.id,p=byId(DB.projects,id),s=projStats(id);
   var name=p?p.name:"งานที่ไม่ระบุโครงการ";

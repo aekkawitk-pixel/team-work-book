@@ -1164,25 +1164,52 @@ function renderMemberDetail(){
 /* ==========================================================
    17. หน้าโครงการ
    ========================================================== */
+var projQ="",projSort="name-asc",projView="grid",projShowAll=false;
 function projStats(id){
   var arr=DB.tasks.filter(function(t){return (t.projectId||"")===id;});
   var done=arr.filter(function(t){return t.status==="completed";}).length;
+  var ws=weekStart(today()),we=addD(ws,6);
   return {all:arr.length,done:done,
     doing:arr.filter(function(t){return t.status==="in_progress";}).length,
     blocked:arr.filter(isStuck).length,
     late:arr.filter(isLate).length,
+    doneWeek:arr.filter(function(t){return t.status==="completed"&&t.completedAt>=ws&&t.completedAt<=we;}).length,
     pct:arr.length?Math.round(done*100/arr.length):0,
     tasks:arr};
 }
+function projList(){
+  var base=(projShowAll?DB.projects.slice():liveProjects());
+  var q=projQ.trim().toLowerCase();
+  if(q)base=base.filter(function(p){return (p.name||"").toLowerCase().indexOf(q)>=0;});
+  base.sort(function(a,b){
+    var r=a.name<b.name?-1:a.name>b.name?1:0;
+    return projSort==="name-desc"?-r:r;
+  });
+  return base;
+}
+function renderProjKpis(ids){
+  var doing=0,late=0,stuck=0,doneWeek=0;
+  ids.forEach(function(id){var s=projStats(id);doing+=s.doing;late+=s.late;stuck+=s.blocked;doneWeek+=s.doneWeek;});
+  $("proj-kpi").innerHTML=[
+    ["doing",doing,"กำลังทำทั้งหมด"],["late",late,"เลยกำหนดทั้งหมด"],
+    ["stuck",stuck,"ติดปัญหาทั้งหมด"],["due",doneWeek,"เสร็จสัปดาห์นี้"]
+  ].map(function(k){return '<div class="kpi-card"><div class="ic '+k[0]+'">'+ICONS[k[0]]+"</div>"+
+    "<div><b>"+k[1]+"</b><span>"+k[2]+"</span></div></div>";}).join("");
+}
 function renderProjects(){
   if(sub&&sub.type==="project"){renderProjectDetail();return;}
-  var list=liveProjects().slice();
-  var hasNone=DB.tasks.some(function(t){return !t.projectId;});
+  var list=projList();
+  var q=projQ.trim().toLowerCase();
+  var hasNone=DB.tasks.some(function(t){return !t.projectId;})&&
+    (!q||"งานที่ไม่ระบุโครงการ".toLowerCase().indexOf(q)>=0);
+  renderProjKpis(list.map(function(p){return p.id;}).concat(hasNone?[""]:[]));
+  $("proj-grid").className="grid"+(projView==="list"?" list-view":"");
   var cards=list.map(function(p){return projCard(p.id,p.name);});
   if(hasNone)cards.push(projCard("","งานที่ไม่ระบุโครงการ"));
   $("proj-grid").innerHTML=cards.length?cards.join("")
-    :'<div style="grid-column:1/-1">'+emptyHTML("ยังไม่มีโครงการ",
-      "เพิ่มโครงการได้ที่หน้าตั้งค่า หรือกดเพิ่มตอนสร้างงานใหม่")+"</div>";
+    :'<div style="grid-column:1/-1">'+emptyHTML(
+      DB.projects.length?"ไม่พบโครงการตามคำค้นหา":"ยังไม่มีโครงการ",
+      DB.projects.length?"ลองล้างคำค้นหาหรือตัวกรอง":"เพิ่มโครงการได้ที่หน้าตั้งค่า หรือกดเพิ่มตอนสร้างงานใหม่")+"</div>";
 }
 function projCard(id,name){
   var s=projStats(id);
@@ -1190,10 +1217,19 @@ function projCard(id,name){
     "<h3>"+esc(name)+"</h3>"+
     '<div class="bar"><i style="width:'+s.pct+'%"></i></div>'+
     '<div class="barline"><span>เสร็จ '+s.done+" / "+s.all+"</span><span>"+s.pct+"%</span></div>"+
-    '<div class="cnt"><span><b>'+s.doing+"</b>กำลังทำ</span>"+
-      '<span class="w"><b>'+s.blocked+"</b>ติดปัญหา</span>"+
-      '<span class="h"><b>'+s.late+"</b>เลยกำหนด</span></div></button>";
+    '<div class="cnt"><span>'+ICONS.doing+"<b>"+s.doing+"</b>กำลังทำ</span>"+
+      '<span class="w">'+ICONS.stuck+"<b>"+s.blocked+"</b>ติดปัญหา</span>"+
+      '<span class="h">'+ICONS.late+"<b>"+s.late+"</b>เลยกำหนด</span></div></button>";
 }
+$("proj-q").addEventListener("input",function(){projQ=this.value;renderProjects();});
+$("proj-sort").addEventListener("change",function(){projSort=this.value;renderProjects();});
+$("proj-show-all").addEventListener("change",function(){projShowAll=this.value==="all";renderProjects();});
+$("proj-view-seg").addEventListener("click",function(e){
+  var b=e.target.closest("[data-view]");if(!b)return;
+  projView=b.dataset.view;
+  Array.prototype.forEach.call(this.children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+  renderProjects();
+});
 function renderProjectDetail(){
   var id=sub.id,p=byId(DB.projects,id),s=projStats(id);
   var name=p?p.name:"งานที่ไม่ระบุโครงการ";

@@ -240,18 +240,26 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
   justify-content:center;color:#fff;font-weight:700;font-size:13px;flex:none}
 .tile .minfo{min-width:0}
 .tile .role{font-size:12px;color:var(--ink-3);margin-top:-2px}
-#team-grid .cnt span{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px}
-#team-grid .cnt b{display:inline;font-family:"IBM Plex Mono",monospace;font-size:15px;
+#team-grid .cnt span,#proj-grid .cnt span{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px}
+#team-grid .cnt b,#proj-grid .cnt b{display:inline;font-family:"IBM Plex Mono",monospace;font-size:15px;
   font-weight:600;color:var(--ink)}
-#team-grid .cnt svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;
+#team-grid .cnt svg,#proj-grid .cnt svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round;flex:none;color:var(--ink-3)}
-#team-grid .cnt .h svg{color:var(--hot)}
-#team-grid .cnt .w svg{color:var(--warn)}
+#team-grid .cnt .h svg,#proj-grid .cnt .h svg{color:var(--hot)}
+#team-grid .cnt .w svg,#proj-grid .cnt .w svg{color:var(--warn)}
+#proj-grid .cnt{grid-template-columns:repeat(3,1fr)}
+
 .grid.list-view{grid-template-columns:1fr}
-.list-view .tile{flex-direction:row;align-items:center;gap:16px}
-.list-view .tile .mhead{flex:1;min-width:0}
-.list-view .tile .cnt{grid-template-columns:repeat(4,auto);gap:6px 22px;flex:none}
-.list-view .tile .sub{display:none}
+#team-grid.list-view .tile{flex-direction:row;align-items:center;gap:16px}
+#team-grid.list-view .tile .mhead{flex:1;min-width:0}
+#team-grid.list-view .tile .cnt{grid-template-columns:repeat(4,auto);gap:6px 22px;flex:none}
+#team-grid.list-view .tile .sub{display:none}
+
+#proj-grid.list-view .tile{flex-direction:row;align-items:center;gap:16px}
+#proj-grid.list-view .tile h3{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#proj-grid.list-view .tile .bar{display:none}
+#proj-grid.list-view .tile .barline{flex:none;width:110px}
+#proj-grid.list-view .tile .cnt{grid-template-columns:repeat(3,auto);gap:6px 18px;flex:none}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .barline{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2)}
 
@@ -451,9 +459,13 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
   .row{grid-template-columns:1fr}
   .row .rr{flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap}
   .grid{grid-template-columns:1fr}
-  .list-view .tile{flex-direction:column;align-items:stretch}
-  .list-view .tile .cnt{grid-template-columns:repeat(2,1fr)}
-  .list-view .tile .sub{display:block}
+  #team-grid.list-view .tile{flex-direction:column;align-items:stretch}
+  #team-grid.list-view .tile .cnt{grid-template-columns:repeat(2,1fr)}
+  #team-grid.list-view .tile .sub{display:block}
+  #proj-grid.list-view .tile{flex-direction:column;align-items:stretch}
+  #proj-grid.list-view .tile .bar{display:block}
+  #proj-grid.list-view .tile .barline{width:auto}
+  #proj-grid.list-view .tile .cnt{grid-template-columns:repeat(3,1fr)}
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   .strip{gap:12px 22px;padding:13px 15px}
   .strip .st b{font-size:22px}
@@ -593,7 +605,28 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
 
     <!-- ══════════ โครงการ ══════════ -->
     <section id="v-projects" hidden>
-      <div class="head sec"><h1>โครงการ</h1><p class="muted">โครงการไหนเดินหน้า โครงการไหนกำลังมีปัญหา</p></div>
+      <div class="head sec">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+          <div><h1>โครงการ</h1><p class="muted">โครงการไหนเดินหน้า โครงการไหนกำลังมีปัญหา</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div class="searchbar" style="margin:0;width:200px;max-width:100%"><span class="mg">⌕</span>
+              <input type="search" id="proj-q" placeholder="ค้นหาโครงการ"></div>
+            <select id="proj-show-all" class="btn sm gh" style="width:auto;max-width:100%">
+              <option value="active">ไม่รวมเก็บเข้าคลัง</option>
+              <option value="all">ทั้งหมด (รวมเก็บเข้าคลัง)</option>
+            </select>
+            <select id="proj-sort" class="btn sm gh" style="width:auto;max-width:100%">
+              <option value="name-asc">เรียง: ชื่อ A-Z</option>
+              <option value="name-desc">เรียง: ชื่อ Z-A</option>
+            </select>
+            <div class="seg" id="proj-view-seg">
+              <button type="button" data-view="grid" aria-pressed="true" title="มุมมองการ์ด">▦</button>
+              <button type="button" data-view="list" aria-pressed="false" title="มุมมองแถว">☰</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-row" id="proj-kpi"></div>
       <div class="grid" id="proj-grid"></div>
     </section>
 
