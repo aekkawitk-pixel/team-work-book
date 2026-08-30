@@ -1052,6 +1052,44 @@ function renderTasks(){
    16. หน้าทีม
    ========================================================== */
 var sub=null;   /* {type:'member'|'project', id} */
+var teamQ="",teamSort="name-asc",teamView="grid",teamShowAll=false;
+var ICONS={
+  doing:'<svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 12l2 2 4-4"/></svg>',
+  late:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  stuck:'<svg viewBox="0 0 24 24"><path d="M12 3l9.5 17H2.5L12 3z"/><path d="M12 9.5v4"/><path d="M12 16.5h.01"/></svg>',
+  due:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>'
+};
+var AVATAR_COLORS=["#0E6E62","#2C7150","#8C5A11","#A03B31","#5E6A72","#0A564C","#6B4C9A","#1F6FA8"];
+function avatarColor(id){
+  var h=0;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;
+  return AVATAR_COLORS[h%AVATAR_COLORS.length];
+}
+function memberInitials(n){
+  n=(n||"").trim().replace(/^(นางสาว|นาง|นาย|น\.ส\.)\s*/,"");
+  return n.slice(0,2)||"?";
+}
+function teamList(){
+  var base=[{id:SELF,name:DB.settings.owner||"ตัวฉันเอง",isSelf:true}]
+    .concat(teamShowAll?DB.members.filter(function(m){return !m.isSelf;}):activeMembers());
+  var q=teamQ.trim().toLowerCase();
+  if(q)base=base.filter(function(m){
+    return (m.name||"").toLowerCase().indexOf(q)>=0||(m.nickname||"").toLowerCase().indexOf(q)>=0;});
+  base.sort(function(a,b){
+    if(a.isSelf!==b.isSelf)return a.isSelf?-1:1;
+    var r=a.name<b.name?-1:a.name>b.name?1:0;
+    return teamSort==="name-desc"?-r:r;
+  });
+  return base;
+}
+function renderTeamKpis(list){
+  var doing=0,late=0,stuck=0,due=0;
+  list.forEach(function(m){var s=memberStats(m.id);doing+=s.active;late+=s.late;stuck+=s.blocked;due+=s.dueWeek;});
+  $("team-kpi").innerHTML=[
+    ["doing",doing,"กำลังทำทั้งหมด"],["late",late,"เลยกำหนดทั้งหมด"],
+    ["stuck",stuck,"ติดปัญหาทั้งหมด"],["due",due,"ครบสัปดาห์นี้"]
+  ].map(function(k){return '<div class="kpi-card"><div class="ic '+k[0]+'">'+ICONS[k[0]]+"</div>"+
+    "<div><b>"+k[1]+"</b><span>"+k[2]+"</span></div></div>";}).join("");
+}
 function memberStats(id){
   var mine=DB.tasks.filter(function(t){return t.ownerId===id;});
   var ws=weekStart(today()),we=addD(ws,6);
@@ -1067,18 +1105,33 @@ function memberStats(id){
 }
 function renderTeam(){
   if(sub&&sub.type==="member"){renderMemberDetail();return;}
-  var list=[{id:SELF,name:(DB.settings.owner||"ตัวฉันเอง")+" — หัวหน้าแผนก"}].concat(activeMembers());
-  $("team-grid").innerHTML=list.map(function(m){
+  var list=teamList();
+  renderTeamKpis(list);
+  $("team-grid").className="grid"+(teamView==="list"?" list-view":"");
+  $("team-grid").innerHTML=list.length?list.map(function(m){
     var s=memberStats(m.id);
+    var role=m.isSelf?"หัวหน้าแผนก":(m.position||m.department||"พนักงาน");
     return '<button class="tile'+(s.late?" alert":"")+'" data-act="member" data-id="'+m.id+'">'+
-      "<h3>"+esc(m.nickname?m.name+" ("+m.nickname+")":m.name)+"</h3>"+
+      '<div class="mhead"><span class="avatar" style="background:'+avatarColor(m.id)+'">'+
+        esc(memberInitials(m.name))+"</span>"+
+      '<div class="minfo"><h3>'+esc(m.nickname?m.name+" ("+m.nickname+")":m.name)+"</h3>"+
+      '<div class="role">'+esc(role)+"</div></div></div>"+
       (s.helping?'<div class="sub">ช่วยงานของคนอื่นอีก '+s.helping+" ชิ้น</div>":"")+
-      '<div class="cnt"><span><b>'+s.active+"</b>กำลังทำ</span>"+
-        '<span class="h"><b>'+s.late+"</b>เลยกำหนด</span>"+
-        '<span class="w"><b>'+s.blocked+"</b>ติดปัญหา</span>"+
-        "<span><b>"+s.dueWeek+"</b>ครบสัปดาห์นี้</span></div></button>";
-  }).join("");
+      '<div class="cnt"><span>'+ICONS.doing+"<b>"+s.active+"</b>กำลังทำ</span>"+
+        '<span class="h">'+ICONS.late+"<b>"+s.late+"</b>เลยกำหนด</span>"+
+        '<span class="w">'+ICONS.stuck+"<b>"+s.blocked+"</b>ติดปัญหา</span>"+
+        "<span>"+ICONS.due+"<b>"+s.dueWeek+"</b>ครบสัปดาห์นี้</span></div></button>";
+  }).join(""):emptyHTML("ไม่พบพนักงานตามคำค้นหา","ลองล้างคำค้นหาหรือตัวกรอง");
 }
+$("team-q").addEventListener("input",function(){teamQ=this.value;renderTeam();});
+$("team-sort").addEventListener("change",function(){teamSort=this.value;renderTeam();});
+$("team-show-all").addEventListener("change",function(){teamShowAll=this.value==="all";renderTeam();});
+$("team-view-seg").addEventListener("click",function(e){
+  var b=e.target.closest("[data-view]");if(!b)return;
+  teamView=b.dataset.view;
+  Array.prototype.forEach.call(this.children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+  renderTeam();
+});
 function renderMemberDetail(){
   var id=sub.id,s=memberStats(id);
   var ws=weekStart(today());

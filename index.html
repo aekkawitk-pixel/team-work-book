@@ -218,6 +218,37 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
   font-weight:500;color:var(--ink);line-height:1.2}
 .tile .cnt .h b{color:var(--hot)} .tile .cnt .w b{color:var(--warn)}
 .bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+/* ---- team page: avatars, kpi row, icon stats, list view ---- */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.kpi-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px 16px;display:flex;align-items:center;gap:12px}
+.kpi-card .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;flex:none}
+.kpi-card .ic svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.kpi-card .ic.doing{background:var(--ok-soft);color:var(--ok)}
+.kpi-card .ic.late{background:var(--hot-soft);color:var(--hot)}
+.kpi-card .ic.stuck{background:var(--warn-soft);color:var(--warn)}
+.kpi-card .ic.due{background:var(--accent-soft);color:var(--accent)}
+.kpi-card b{display:block;font-family:"IBM Plex Mono",monospace;font-size:21px;font-weight:600;line-height:1.15}
+.kpi-card span{font-size:12px;color:var(--ink-2)}
+.tile .mhead{display:flex;align-items:center;gap:10px}
+.tile .avatar{width:38px;height:38px;border-radius:99px;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-weight:700;font-size:13px;flex:none}
+.tile .minfo{min-width:0}
+.tile .role{font-size:12px;color:var(--ink-3);margin-top:-2px}
+#team-grid .cnt span{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px}
+#team-grid .cnt b{display:inline;font-family:"IBM Plex Mono",monospace;font-size:15px;
+  font-weight:600;color:var(--ink)}
+#team-grid .cnt svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round;flex:none;color:var(--ink-3)}
+#team-grid .cnt .h svg{color:var(--hot)}
+#team-grid .cnt .w svg{color:var(--warn)}
+.grid.list-view{grid-template-columns:1fr}
+.list-view .tile{flex-direction:row;align-items:center;gap:16px}
+.list-view .tile .mhead{flex:1;min-width:0}
+.list-view .tile .cnt{grid-template-columns:repeat(4,auto);gap:6px 22px;flex:none}
+.list-view .tile .sub{display:none}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .barline{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2)}
 
@@ -417,6 +448,10 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
   .row{grid-template-columns:1fr}
   .row .rr{flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap}
   .grid{grid-template-columns:1fr}
+  .list-view .tile{flex-direction:column;align-items:stretch}
+  .list-view .tile .cnt{grid-template-columns:repeat(2,1fr)}
+  .list-view .tile .sub{display:block}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
   .strip{gap:12px 22px;padding:13px 15px}
   .strip .st b{font-size:22px}
   input[type=text],input[type=date],input[type=time],input[type=search],select,textarea{font-size:16px}
@@ -531,7 +566,28 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
 
     <!-- ══════════ ทีม ══════════ -->
     <section id="v-team" hidden>
-      <div class="head sec"><h1>ทีม</h1><p class="muted">ใครงานล้น ใครติดปัญหา ใครยังไม่ได้อัปเดต</p></div>
+      <div class="head sec">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+          <div><h1>ทีม</h1><p class="muted">ใครงานล้น ใครติดปัญหา ใครยังไม่ได้อัปเดต</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div class="searchbar" style="margin:0;width:200px;max-width:100%"><span class="mg">⌕</span>
+              <input type="search" id="team-q" placeholder="ค้นหาชื่อพนักงาน"></div>
+            <select id="team-show-all" class="btn sm gh">
+              <option value="active">เฉพาะที่ใช้งาน</option>
+              <option value="all">ทั้งหมด (รวมไม่ใช้งาน)</option>
+            </select>
+            <select id="team-sort" class="btn sm gh">
+              <option value="name-asc">เรียง: ชื่อ A-Z</option>
+              <option value="name-desc">เรียง: ชื่อ Z-A</option>
+            </select>
+            <div class="seg" id="team-view-seg">
+              <button type="button" data-view="grid" aria-pressed="true" title="มุมมองการ์ด">▦</button>
+              <button type="button" data-view="list" aria-pressed="false" title="มุมมองแถว">☰</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-row" id="team-kpi"></div>
       <div class="grid" id="team-grid"></div>
     </section>
 
@@ -1886,6 +1942,44 @@ function renderTasks(){
    16. หน้าทีม
    ========================================================== */
 var sub=null;   /* {type:'member'|'project', id} */
+var teamQ="",teamSort="name-asc",teamView="grid",teamShowAll=false;
+var ICONS={
+  doing:'<svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 12l2 2 4-4"/></svg>',
+  late:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  stuck:'<svg viewBox="0 0 24 24"><path d="M12 3l9.5 17H2.5L12 3z"/><path d="M12 9.5v4"/><path d="M12 16.5h.01"/></svg>',
+  due:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>'
+};
+var AVATAR_COLORS=["#0E6E62","#2C7150","#8C5A11","#A03B31","#5E6A72","#0A564C","#6B4C9A","#1F6FA8"];
+function avatarColor(id){
+  var h=0;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;
+  return AVATAR_COLORS[h%AVATAR_COLORS.length];
+}
+function memberInitials(n){
+  n=(n||"").trim().replace(/^(นางสาว|นาง|นาย|น\.ส\.)\s*/,"");
+  return n.slice(0,2)||"?";
+}
+function teamList(){
+  var base=[{id:SELF,name:DB.settings.owner||"ตัวฉันเอง",isSelf:true}]
+    .concat(teamShowAll?DB.members.filter(function(m){return !m.isSelf;}):activeMembers());
+  var q=teamQ.trim().toLowerCase();
+  if(q)base=base.filter(function(m){
+    return (m.name||"").toLowerCase().indexOf(q)>=0||(m.nickname||"").toLowerCase().indexOf(q)>=0;});
+  base.sort(function(a,b){
+    if(a.isSelf!==b.isSelf)return a.isSelf?-1:1;
+    var r=a.name<b.name?-1:a.name>b.name?1:0;
+    return teamSort==="name-desc"?-r:r;
+  });
+  return base;
+}
+function renderTeamKpis(list){
+  var doing=0,late=0,stuck=0,due=0;
+  list.forEach(function(m){var s=memberStats(m.id);doing+=s.active;late+=s.late;stuck+=s.blocked;due+=s.dueWeek;});
+  $("team-kpi").innerHTML=[
+    ["doing",doing,"กำลังทำทั้งหมด"],["late",late,"เลยกำหนดทั้งหมด"],
+    ["stuck",stuck,"ติดปัญหาทั้งหมด"],["due",due,"ครบสัปดาห์นี้"]
+  ].map(function(k){return '<div class="kpi-card"><div class="ic '+k[0]+'">'+ICONS[k[0]]+"</div>"+
+    "<div><b>"+k[1]+"</b><span>"+k[2]+"</span></div></div>";}).join("");
+}
 function memberStats(id){
   var mine=DB.tasks.filter(function(t){return t.ownerId===id;});
   var ws=weekStart(today()),we=addD(ws,6);
@@ -1901,18 +1995,33 @@ function memberStats(id){
 }
 function renderTeam(){
   if(sub&&sub.type==="member"){renderMemberDetail();return;}
-  var list=[{id:SELF,name:(DB.settings.owner||"ตัวฉันเอง")+" — หัวหน้าแผนก"}].concat(activeMembers());
-  $("team-grid").innerHTML=list.map(function(m){
+  var list=teamList();
+  renderTeamKpis(list);
+  $("team-grid").className="grid"+(teamView==="list"?" list-view":"");
+  $("team-grid").innerHTML=list.length?list.map(function(m){
     var s=memberStats(m.id);
+    var role=m.isSelf?"หัวหน้าแผนก":(m.position||m.department||"พนักงาน");
     return '<button class="tile'+(s.late?" alert":"")+'" data-act="member" data-id="'+m.id+'">'+
-      "<h3>"+esc(m.nickname?m.name+" ("+m.nickname+")":m.name)+"</h3>"+
+      '<div class="mhead"><span class="avatar" style="background:'+avatarColor(m.id)+'">'+
+        esc(memberInitials(m.name))+"</span>"+
+      '<div class="minfo"><h3>'+esc(m.nickname?m.name+" ("+m.nickname+")":m.name)+"</h3>"+
+      '<div class="role">'+esc(role)+"</div></div></div>"+
       (s.helping?'<div class="sub">ช่วยงานของคนอื่นอีก '+s.helping+" ชิ้น</div>":"")+
-      '<div class="cnt"><span><b>'+s.active+"</b>กำลังทำ</span>"+
-        '<span class="h"><b>'+s.late+"</b>เลยกำหนด</span>"+
-        '<span class="w"><b>'+s.blocked+"</b>ติดปัญหา</span>"+
-        "<span><b>"+s.dueWeek+"</b>ครบสัปดาห์นี้</span></div></button>";
-  }).join("");
+      '<div class="cnt"><span>'+ICONS.doing+"<b>"+s.active+"</b>กำลังทำ</span>"+
+        '<span class="h">'+ICONS.late+"<b>"+s.late+"</b>เลยกำหนด</span>"+
+        '<span class="w">'+ICONS.stuck+"<b>"+s.blocked+"</b>ติดปัญหา</span>"+
+        "<span>"+ICONS.due+"<b>"+s.dueWeek+"</b>ครบสัปดาห์นี้</span></div></button>";
+  }).join(""):emptyHTML("ไม่พบพนักงานตามคำค้นหา","ลองล้างคำค้นหาหรือตัวกรอง");
 }
+$("team-q").addEventListener("input",function(){teamQ=this.value;renderTeam();});
+$("team-sort").addEventListener("change",function(){teamSort=this.value;renderTeam();});
+$("team-show-all").addEventListener("change",function(){teamShowAll=this.value==="all";renderTeam();});
+$("team-view-seg").addEventListener("click",function(e){
+  var b=e.target.closest("[data-view]");if(!b)return;
+  teamView=b.dataset.view;
+  Array.prototype.forEach.call(this.children,function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+  renderTeam();
+});
 function renderMemberDetail(){
   var id=sub.id,s=memberStats(id);
   var ws=weekStart(today());
