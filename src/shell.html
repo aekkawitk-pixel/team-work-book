@@ -499,7 +499,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
         <div id="today-list"></div>
       </div>
       <div class="sec">
-        <div class="sec-h"><h2>บันทึกของฉัน</h2><div style="display:flex;align-items:center;gap:10px">
+        <div class="sec-h"><h2>บันทึกของฉัน</h2><div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
           <span class="hint">สิ่งที่ทำเองวันนี้ ที่ไม่ได้อยู่ในงานของใคร</span>
           <button class="btn sm gh" id="notes-all-btn">ดูทั้งหมด</button></div></div>
         <div class="card pad" style="display:grid;gap:11px">
@@ -616,7 +616,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
       </div>
 
       <div class="sec">
-        <div class="sec-h"><h2>ผู้มอบหมายงาน <span class="dim" id="requester-count" style="font-weight:400;font-size:13px"></span></h2><div style="display:flex;gap:8px">
+        <div class="sec-h"><h2>ผู้มอบหมายงาน <span class="dim" id="requester-count" style="font-weight:400;font-size:13px"></span></h2><div style="display:flex;flex-wrap:wrap;gap:8px">
           <button class="btn sm gh" id="import-requesters">นำเข้ารายชื่อ</button>
           <button class="btn sm gh" id="add-requester">＋ เพิ่ม</button></div></div>
         <input type="file" id="requester-import-file" accept=".xlsx,.csv,.tsv,text/csv" hidden>
