@@ -67,7 +67,7 @@ create table public.tasks (
   assignee_id uuid references public.members(id) on delete set null,
   project_id uuid references public.projects(id) on delete set null,
   status text not null default 'received'
-    check (status in ('received','in_progress','blocked','completed','paused')),
+    check (status in ('received','in_progress','waiting','blocked','completed','paused')),
   priority text not null default 'normal' check (priority in ('high','normal','low')),
   received_at timestamptz not null default now(),
   due_at date,
@@ -99,7 +99,7 @@ create table public.task_updates (
   owner_id uuid not null references auth.users(id) on delete cascade,
   message text not null default '',
   status text not null default ''
-    check (status in ('','received','in_progress','blocked','completed','paused')),
+    check (status in ('','received','in_progress','waiting','blocked','completed','paused')),
   created_at timestamptz not null default now()
 );
 create index task_updates_task on public.task_updates(task_id, created_at);

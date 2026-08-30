@@ -6,12 +6,13 @@
    ========================================================== */
 var MON=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 var DAYF=["วันอาทิตย์","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์"];
-var STATUS={received:"รับเรื่อง",in_progress:"กำลังทำ",blocked:"รอ/ติดปัญหา",
+var STATUS={received:"รับเรื่อง",in_progress:"กำลังทำ",waiting:"รอ",blocked:"ติดปัญหา",
             completed:"เสร็จแล้ว",paused:"พักไว้"};
-var STORDER=["received","in_progress","blocked","completed","paused"];
-var STREP={received:"ยังไม่เริ่ม",in_progress:"กำลังดำเนินการ",blocked:"รอ/ติดปัญหา",
+var STORDER=["received","in_progress","waiting","blocked","completed","paused"];
+var STREP={received:"ยังไม่เริ่ม",in_progress:"กำลังดำเนินการ",waiting:"รอ",blocked:"ติดปัญหา",
            completed:"เสร็จแล้ว",paused:"พักไว้"};
-var STSYM={received:"○",in_progress:"◐",blocked:"!",completed:"✓",paused:"‖"};
+var STSYM={received:"○",in_progress:"◐",waiting:"⋯",blocked:"!",completed:"✓",paused:"‖"};
+function isStuck(t){return t.status==="blocked"||t.status==="waiting";}
 var PRIO={high:"สูง",normal:"ปกติ",low:"ต่ำ"};
 var CYCLE={"":"ไม่ต้องรายงาน",weekly:"ทุกสัปดาห์",biweekly:"ทุก 2 สัปดาห์",monthly:"ทุกเดือน"};
 var CYSHORT={weekly:"รายงานทุกสัปดาห์",biweekly:"รายงานทุก 2 สัปดาห์",monthly:"รายงานทุกเดือน"};
@@ -255,7 +256,7 @@ function migrate(o){
   }
   (o.sources||[]).forEach(req);
   (o.projects||[]).forEach(prj);
-  var SM={"new":"received",doing:"in_progress",waiting:"blocked",done:"completed",hold:"paused"};
+  var SM={"new":"received",doing:"in_progress",waiting:"waiting",done:"completed",hold:"paused"};
   var CM={w:"weekly","2w":"biweekly",m:"monthly"};
   (o.tasks||[]).forEach(function(t){
     var id=t.id||uid();
@@ -484,7 +485,7 @@ function followUps(){
     if(t.status==="completed"||t.status==="paused")return;
     var r=null;
     if(t.dueAt&&t.dueAt<t0)r={k:0,cls:"r-over",txt:"เลยกำหนด "+dayDiff(t.dueAt,t0)+" วัน"};
-    else if(t.status==="blocked")r={k:1,cls:"r-block",txt:"รอ / ติดปัญหา"};
+    else if(isStuck(t))r={k:1,cls:"r-block",txt:STATUS[t.status]};
     else if(reportDue(t))r={k:2,cls:"r-cycle",txt:"ถึงรอบรายงานแล้ว"};
     else if(t.dueAt===t0)r={k:3,cls:"r-due",txt:"ครบกำหนดวันนี้"};
     else if(t.dueAt===t1)r={k:4,cls:"r-due",txt:"พรุ่งนี้ครบกำหนด"};
@@ -943,7 +944,7 @@ function renderToday(){
   var over=DB.tasks.filter(isLate).length;
   var near=DB.tasks.filter(function(t){
     return isOpen(t)&&t.status!=="paused"&&t.dueAt&&t.dueAt>=t0&&t.dueAt<=t2;}).length;
-  var blocked=DB.tasks.filter(function(t){return t.status==="blocked";}).length;
+  var blocked=DB.tasks.filter(isStuck).length;
   $("today-strip").innerHTML=
     st(f.length,"ต้องตาม",f.length?"acc":"")+
     st(over,"เลยกำหนด",over?"hot":"")+
@@ -1058,7 +1059,7 @@ function memberStats(id){
     active:mine.filter(function(t){return t.status==="in_progress";}).length,
     open:mine.filter(isOpen).length,
     late:mine.filter(isLate).length,
-    blocked:mine.filter(function(t){return t.status==="blocked";}).length,
+    blocked:mine.filter(isStuck).length,
     dueWeek:mine.filter(function(t){return isOpen(t)&&t.dueAt&&t.dueAt>=ws&&t.dueAt<=we;}).length,
     doneWeek:mine.filter(function(t){return t.status==="completed"&&t.completedAt>=ws&&t.completedAt<=we;}).length,
     helping:DB.tasks.filter(function(t){return isOpen(t)&&t.ownerId!==id&&collabs(t).indexOf(id)>=0;}).length
@@ -1085,7 +1086,7 @@ function renderMemberDetail(){
   var fu=followUps().filter(function(t){return involves(t,id);});
   var fuIds={};fu.forEach(function(t){fuIds[t.id]=1;});
   var doing=mine.filter(function(t){return t.status==="in_progress"&&!fuIds[t.id];}).sort(sortTasks);
-  var blocked=mine.filter(function(t){return t.status==="blocked"&&!fuIds[t.id];}).sort(sortTasks);
+  var blocked=mine.filter(function(t){return isStuck(t)&&!fuIds[t.id];}).sort(sortTasks);
   var done=mine.filter(function(t){return t.status==="completed"&&t.completedAt>=addD(ws,-7);})
     .sort(function(a,b){return a.completedAt<b.completedAt?1:-1;}).slice(0,8);
   var helping=DB.tasks.filter(function(t){return isOpen(t)&&t.ownerId!==id&&collabs(t).indexOf(id)>=0;});
@@ -1115,7 +1116,7 @@ function projStats(id){
   var done=arr.filter(function(t){return t.status==="completed";}).length;
   return {all:arr.length,done:done,
     doing:arr.filter(function(t){return t.status==="in_progress";}).length,
-    blocked:arr.filter(function(t){return t.status==="blocked";}).length,
+    blocked:arr.filter(isStuck).length,
     late:arr.filter(isLate).length,
     pct:arr.length?Math.round(done*100/arr.length):0,
     tasks:arr};
@@ -1184,7 +1185,7 @@ function rangeData(from,to){
   return {from:from,to:to,
     done:DB.tasks.filter(function(t){return t.status==="completed"&&inR(t.completedAt);}),
     doing:DB.tasks.filter(function(t){return t.status==="received"||t.status==="in_progress";}),
-    blocked:DB.tasks.filter(function(t){return t.status==="blocked";}),
+    blocked:DB.tasks.filter(isStuck),
     fresh:DB.tasks.filter(function(t){return inR(dOf(t.receivedAt));}),
     late:DB.tasks.filter(isLate),
     notes:DB.notes.filter(function(n){return inR(n.date);})};
@@ -1224,7 +1225,7 @@ function renderWeek(){
   groups.forEach(function(g){
     var d=g.items.filter(function(t){return t.status==="completed";});
     var p=g.items.filter(function(t){return t.status==="received"||t.status==="in_progress";}).sort(sortTasks);
-    var b=g.items.filter(function(t){return t.status==="blocked";});
+    var b=g.items.filter(isStuck);
     if(!d.length&&!p.length&&!b.length)return;
     h+='<div class="prj"><h3>'+esc(g.name)+"</h3>";
     if(d.length)h+="<h4>เสร็จแล้ว</h4><ul>"+d.map(function(t){
@@ -1276,7 +1277,7 @@ function reportText(w,wn){
   groupByProject(u).forEach(function(g){
     var d=g.items.filter(function(t){return t.status==="completed";});
     var p=g.items.filter(function(t){return t.status==="received"||t.status==="in_progress";}).sort(sortTasks);
-    var b=g.items.filter(function(t){return t.status==="blocked";});
+    var b=g.items.filter(isStuck);
     if(!d.length&&!p.length&&!b.length)return;
     L.push(g.id?("โครงการ "+g.name):g.name);
     if(d.length){L.push("เสร็จแล้ว");d.forEach(function(t){
@@ -1381,7 +1382,7 @@ function renderPrint(){
     if(!arr.length)return "";
     var c={};arr.forEach(function(t){c[t.status]=(c[t.status]||0)+1;});
     return '<p class="tally"><b>'+arr.length+"</b> งาน"+
-      ["completed","in_progress","received","blocked","paused"].filter(function(k){return c[k];})
+      ["completed","in_progress","received","waiting","blocked","paused"].filter(function(k){return c[k];})
       .map(function(k){return '<span class="st-'+k+'"><i>'+STSYM[k]+"</i>"+STREP[k]+" "+c[k]+"</span>";})
       .join("")+"</p>";
   }
