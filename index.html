@@ -1845,8 +1845,9 @@ function openDetail(id){
 function rowHTML(t,showReason){
   var meta=[];
   var pn=projName(t.projectId);
+  var heading=pn||t.title;
   meta.push("<b>"+esc(memberShort(t.ownerId))+"</b>");
-  if(pn)meta.push(esc(pn));
+  if(pn)meta.push(esc(t.title));
   if(t.dueAt)meta.push("ครบกำหนด "+fmtD(t.dueAt));
   var q=quietDays(t);
   meta.push(t.updates.length?("อัปเดตล่าสุด "+(q===0?"วันนี้":q+" วันก่อน")):"ยังไม่มีอัปเดต");
@@ -1855,7 +1856,7 @@ function rowHTML(t,showReason){
   if(t.reportCycle&&isOpen(t))right+='<span class="tag">'+CYSHORT[t.reportCycle]+"</span>";
   return '<div class="row" data-id="'+t.id+'">'+
     "<div>"+(showReason&&t.__r?'<span class="reason '+t.__r.cls+'"><i>●</i>'+esc(t.__r.txt)+"</span>":"")+
-      '<div class="rt">'+esc(t.title)+"</div>"+
+      '<div class="rt">'+esc(heading)+"</div>"+
       '<div class="rm">'+meta.map(function(m){return "<span>"+m+"</span>";}).join("")+"</div></div>"+
     '<div class="rr">'+right+"</div>"+
     '<div class="acts">'+
