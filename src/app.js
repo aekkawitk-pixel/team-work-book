@@ -1268,8 +1268,6 @@ function renderProjectDetail(){
   var open=s.tasks.filter(isOpen).sort(sortTasks);
   var done=s.tasks.filter(function(t){return t.status==="completed";})
     .sort(function(a,b){return a.completedAt<b.completedAt?1:-1;}).slice(0,10);
-  var notes=DB.notes.filter(function(n){return (n.projectId||"")===id;})
-    .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});
   var kv="";
   if(p){
     var rows=[["สถานะ",p.status==="done"?"ปิดโครงการ":"กำลังดำเนินการ"],
@@ -1297,8 +1295,6 @@ function renderProjectDetail(){
         s.all?"งานในโครงการนี้ปิดครบแล้ว":"เพิ่มงานแรกได้จากปุ่มด้านบน"))+"</div>"+
     (done.length?'<div class="sec"><div class="sec-h"><h2>เสร็จล่าสุด</h2></div>'+
       listHTML(done,false)+"</div>":"")+
-    (notes.length?'<div class="sec"><div class="sec-h"><h2>บันทึกของฉัน ('+notes.length+")</h2></div>"+
-      '<ul class="tl card pad">'+notes.map(noteRow).join("")+"</ul></div>":"")+
     "</div>";
 }
 
