@@ -1858,8 +1858,9 @@ function rowHTML(t,showReason){
   if(t.dueAt)meta.push("ครบกำหนด "+fmtD(t.dueAt));
   var q=quietDays(t);
   meta.push(t.updates.length?("อัปเดตล่าสุด "+(q===0?"วันนี้":q+" วันก่อน")):"ยังไม่มีอัปเดต");
-  var right='<span class="pill s-'+t.status+'">'+STATUS[t.status]+"</span>";
+  var right="";
   if(t.priority==="high")right+='<span class="tag p-high">ด่วน</span>';
+  right+='<span class="pill s-'+t.status+'">'+STATUS[t.status]+"</span>";
   if(t.reportCycle&&isOpen(t))right+='<span class="tag">'+CYSHORT[t.reportCycle]+"</span>";
   return '<div class="row" data-id="'+t.id+'">'+
     "<div>"+(showReason&&t.__r?'<span class="reason '+t.__r.cls+'"><i>●</i>'+esc(t.__r.txt)+"</span>":"")+
