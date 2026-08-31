@@ -451,7 +451,7 @@ function applyTheme(){
    6. ข้อมูลคำนวณ
    ========================================================== */
 function memberLabel(id){
-  if(!id||id===SELF)return DB.settings.owner?DB.settings.owner+" (ดูแลเอง)":"หัวหน้าดูแลเอง";
+  if(!id||id===SELF)return DB.settings.owner||"หัวหน้าดูแลเอง";
   var m=byId(DB.members,id);return m?m.name:"ไม่ระบุ";
 }
 function memberShort(id){
@@ -581,7 +581,7 @@ function openPick(kind,cur,cb){
 }
 function pickItems(kind){
   if(kind==="member")
-    return [{id:SELF,name:DB.settings.owner?DB.settings.owner+" (ดูแลเอง)":"หัวหน้าดูแลเอง"}]
+    return [{id:SELF,name:DB.settings.owner||"หัวหน้าดูแลเอง"}]
       .concat(activeMembers().map(function(m){
         return {id:m.id,name:m.name,side:m.nickname};}));
   if(kind==="project")
