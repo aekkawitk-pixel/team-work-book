@@ -1492,13 +1492,13 @@ function renderPrint(){
   }
   function table(arr,head,row){
     if(!arr.length)return '<p class="none">ไม่มีรายการ</p>';
-    return grp(arr).map(function(g){
-      return "<h4>"+esc(g.name)+" ("+g.items.length+")</h4>"+
-        '<div class="tw"><table><thead><tr>'+head.map(function(h){
-          return "<th>"+esc(h)+"</th>";}).join("")+"</tr></thead><tbody>"+
-        g.items.map(function(t){return "<tr>"+row(t).join("")+"</tr>";}).join("")+
-        "</tbody></table></div>";
-    }).join("");
+    return '<div class="tw"><table><thead><tr>'+head.map(function(h){
+        return "<th>"+esc(h)+"</th>";}).join("")+"</tr></thead><tbody>"+
+      grp(arr).map(function(g){
+        return '<tr class="grp-row"><td colspan="'+head.length+'">'+esc(g.name)+" ("+g.items.length+")</td></tr>"+
+          g.items.map(function(t){return "<tr>"+row(t).join("")+"</tr>";}).join("");
+      }).join("")+
+      "</tbody></table></div>";
   }
   function tally(arr){
     if(!arr.length)return "";
