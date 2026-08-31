@@ -1536,7 +1536,7 @@ function renderPrint(){
       var u=lastUpdate(t);
       return [titleCell(t),whoCell(t),
         '<td class="n'+(isLate(t)?" late":"")+'">'+(t.dueAt?fmtD(t.dueAt):"—")+"</td>",
-        "<td>"+(u?esc(u.message)+' <span class="n">('+fmtD(dOf(u.createdAt))+")</span>":
+        "<td>"+(u?esc(u.message)+' <span class="n">('+fmtDY(dOf(u.createdAt))+")</span>":
           '<span class="none">ยังไม่มีอัปเดต</span>')+"</td>"];})+"</section>";
   h+="<section><h3>ติดปัญหา / รออยู่</h3>"+table(blocked,["งาน","ผู้รับผิดชอบ","ติดตั้งแต่","ประเด็น"],
     function(t){var u=lastUpdate(t);
