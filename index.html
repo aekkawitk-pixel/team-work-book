@@ -1894,12 +1894,14 @@ function renderToday(){
   var over=DB.tasks.filter(isLate).length;
   var near=DB.tasks.filter(function(t){
     return isOpen(t)&&t.status!=="paused"&&t.dueAt&&t.dueAt>=t0&&t.dueAt<=t2;}).length;
-  var blocked=DB.tasks.filter(isStuck).length;
+  var waiting=DB.tasks.filter(function(t){return t.status==="waiting";}).length;
+  var blocked=DB.tasks.filter(function(t){return t.status==="blocked";}).length;
   $("today-strip").innerHTML=
     st(f.length,"ต้องตาม",f.length?"acc":"")+
     st(over,"เลยกำหนด",over?"hot":"")+
     st(near,"ใกล้ครบกำหนด",near?"warn":"")+
-    st(blocked,"รอ/ติดปัญหา",blocked?"warn":"");
+    st(waiting,"รอ",waiting?"warn":"")+
+    st(blocked,"ติดปัญหา",blocked?"warn":"");
   $("today-list").innerHTML=f.length?listHTML(f,true)
     :emptyHTML("วันนี้ไม่มีงานที่ต้องตาม 🎉","งานทุกอย่างอยู่ในแผน",["ดูงานทั้งหมด","goTasks"]);
   var notes=DB.notes.filter(function(n){return n.date===t0;});
