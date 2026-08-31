@@ -2137,6 +2137,10 @@ function renderProjKpis(ids){
   ].map(function(k){return '<div class="kpi-card"><div class="ic '+k[0]+'">'+ICONS[k[0]]+"</div>"+
     "<div><b>"+k[1]+"</b><span>"+k[2]+"</span></div></div>";}).join("");
 }
+function grpHead(title,n,first){
+  return '<div class="grp-h" style="grid-column:1/-1'+(first?"":";margin-top:8px")+
+    '"><b>'+esc(title)+"</b><span>("+n+")</span></div>";
+}
 function renderProjects(){
   if(sub&&sub.type==="project"){renderProjectDetail();return;}
   var list=projList();
@@ -2145,12 +2149,21 @@ function renderProjects(){
     (!q||"งานที่ไม่ระบุโครงการ".toLowerCase().indexOf(q)>=0);
   renderProjKpis(list.map(function(p){return p.id;}).concat(hasNone?[""]:[]));
   $("proj-grid").className="grid"+(projView==="list"?" list-view":"");
-  var cards=list.map(function(p){return projCard(p.id,p.name);});
-  if(hasNone)cards.push(projCard("","งานที่ไม่ระบุโครงการ"));
-  $("proj-grid").innerHTML=cards.length?cards.join("")
-    :'<div style="grid-column:1/-1">'+emptyHTML(
-      DB.projects.length?"ไม่พบโครงการตามคำค้นหา":"ยังไม่มีโครงการ",
-      DB.projects.length?"ลองล้างคำค้นหาหรือตัวกรอง":"เพิ่มโครงการได้ที่หน้าตั้งค่า หรือกดเพิ่มตอนสร้างงานใหม่")+"</div>";
+  var active=list.filter(function(p){return p.status!=="done";});
+  var done=list.filter(function(p){return p.status==="done";});
+  var html="";
+  if(active.length||hasNone){
+    html+=grpHead("กำลังดำเนินการ",active.length+(hasNone?1:0),true);
+    html+=active.map(function(p){return projCard(p.id,p.name);}).join("");
+    if(hasNone)html+=projCard("","งานที่ไม่ระบุโครงการ");
+  }
+  if(done.length){
+    html+=grpHead("ปิดโครงการ",done.length,!active.length&&!hasNone);
+    html+=done.map(function(p){return projCard(p.id,p.name);}).join("");
+  }
+  $("proj-grid").innerHTML=html||'<div style="grid-column:1/-1">'+emptyHTML(
+    DB.projects.length?"ไม่พบโครงการตามคำค้นหา":"ยังไม่มีโครงการ",
+    DB.projects.length?"ลองล้างคำค้นหาหรือตัวกรอง":"เพิ่มโครงการได้ที่หน้าตั้งค่า หรือกดเพิ่มตอนสร้างงานใหม่")+"</div>";
 }
 function projCard(id,name){
   var s=projStats(id);
