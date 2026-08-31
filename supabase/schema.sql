@@ -52,6 +52,7 @@ create table public.projects (
   status text not null default 'active' check (status in ('active','done')),
   start_at date,
   end_at date,
+  member_ids uuid[] not null default '{}',
   archived boolean not null default false,
   sort_order int not null default 0,
   created_at timestamptz not null default now()

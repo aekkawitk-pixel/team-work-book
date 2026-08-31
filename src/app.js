@@ -211,7 +211,8 @@ function normalize(db){
     m.department=m.department||"";m.position=m.position||"";});
   db.requesters.forEach(function(x){x.active=x.active!==false;x.department=x.department||"";x.position=x.position||"";});
   db.projects.forEach(function(p){p.description=p.description||"";p.status=p.status||"active";
-    p.startAt=p.startAt||"";p.endAt=p.endAt||"";p.archived=!!p.archived;});
+    p.startAt=p.startAt||"";p.endAt=p.endAt||"";p.archived=!!p.archived;
+    p.memberIds=Array.isArray(p.memberIds)?p.memberIds:[];});
   db.tasks.forEach(function(t){
     t.description=t.description||"";
     t.collaboratorIds=Array.isArray(t.collaboratorIds)?t.collaboratorIds:[];
@@ -318,7 +319,7 @@ function rowRequester(r,i){return {id:r.id,owner_id:UID,name:r.name,department:r
   position:r.position||"",active:r.active!==false,sort_order:i};}
 function rowProject(p,i){return {id:p.id,owner_id:UID,name:p.name,description:p.description||"",
   status:p.status||"active",start_at:p.startAt||null,end_at:p.endAt||null,
-  archived:!!p.archived,sort_order:i};}
+  member_ids:p.memberIds||[],archived:!!p.archived,sort_order:i};}
 function rowTask(t){return {id:t.id,owner_id:UID,title:t.title,description:t.description||"",
   requester_id:t.requesterId||null,
   assignee_id:(t.ownerId&&t.ownerId!==SELF)?t.ownerId:(SELF||null),
@@ -451,6 +452,10 @@ function memberLabel(id){
 function memberShort(id){
   if(!id||id===SELF)return DB.settings.owner||"หัวหน้า";
   var m=byId(DB.members,id);return m?(m.nickname||m.name):"ไม่ระบุ";
+}
+function memberChipOptions(){
+  return [[SELF,memberLabel(SELF)]].concat(
+    activeMembers().map(function(m){return [m.id,m.nickname?m.name+" ("+m.nickname+")":m.name];}));
 }
 function projName(id){var p=byId(DB.projects,id);return p?p.name:"";}
 function reqName(id){var r=byId(DB.requesters,id);return r?r.name:"";}
@@ -641,18 +646,31 @@ function openForm(title,fields,cb){
     if(f.type==="textarea")
       return '<div class="field"><label>'+esc(f.label)+'</label><textarea data-fk="'+f.key+
         '">'+esc(f.value||"")+"</textarea></div>";
+    if(f.type==="chips")
+      return '<div class="field"><label>'+esc(f.label)+'</label><div class="chips" data-fk="'+f.key+'">'+
+        (f.options.length?f.options.map(function(o){
+          return '<button type="button" class="chip" data-val="'+esc(o[0])+'" aria-pressed="'+
+            ((f.value||[]).indexOf(o[0])>=0?"true":"false")+'">'+esc(o[1])+"</button>";}).join(""):
+          '<span class="dim" style="font-size:13px">ยังไม่มีตัวเลือก</span>')+"</div></div>";
     return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+
       (f.type||"text")+'" data-fk="'+f.key+'" value="'+esc(f.value||"")+'"></div>';
   }).join("");
   openOv("ov-form");
   setTimeout(function(){var i=$("form-body").querySelector("input,textarea,select");if(i)i.focus();},60);
 }
+$("form-body").addEventListener("click",function(e){
+  var b=e.target.closest(".chips[data-fk] [data-val]");if(!b)return;
+  b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")==="true"?"false":"true");
+});
 $("form-save").addEventListener("click",function(){
   var v={};
   formFields.forEach(function(f){
     var el=$("form-body").querySelector('[data-fk="'+f.key+'"]');
     if(!el)return;
-    v[f.key]=(el.type==="checkbox")?el.checked:el.value.trim();
+    if(f.type==="chips")
+      v[f.key]=Array.prototype.filter.call(el.querySelectorAll("[data-val]"),function(b){
+        return b.getAttribute("aria-pressed")==="true";}).map(function(b){return b.dataset.val;});
+    else v[f.key]=(el.type==="checkbox")?el.checked:el.value.trim();
   });
   var ok=formCb?formCb(v):true;
   if(ok!==false)closeOv("ov-form");
@@ -1233,7 +1251,8 @@ $("proj-view-seg").addEventListener("click",function(e){
 function renderProjectDetail(){
   var id=sub.id,p=byId(DB.projects,id),s=projStats(id);
   var name=p?p.name:"งานที่ไม่ระบุโครงการ";
-  var who=uniq(s.tasks.filter(isOpen).map(function(t){return memberShort(t.ownerId);}));
+  var who=(p&&p.memberIds&&p.memberIds.length)?p.memberIds.map(memberShort):
+    uniq(s.tasks.filter(isOpen).map(function(t){return memberShort(t.ownerId);}));
   var open=s.tasks.filter(isOpen).sort(sortTasks);
   var done=s.tasks.filter(function(t){return t.status==="completed";})
     .sort(function(a,b){return a.completedAt<b.completedAt?1:-1;}).slice(0,10);
@@ -1712,10 +1731,11 @@ document.addEventListener("click",function(e){
       {key:"status",label:"สถานะ",type:"select",value:p.status,
         options:[["active","กำลังดำเนินการ"],["done","ปิดโครงการ"]]},
       {key:"startAt",label:"วันที่เริ่ม",type:"date",value:p.startAt},
-      {key:"endAt",label:"กำหนดสิ้นสุด",type:"date",value:p.endAt}],
+      {key:"endAt",label:"กำหนดสิ้นสุด",type:"date",value:p.endAt},
+      {key:"memberIds",label:"ผู้เกี่ยวข้อง",type:"chips",value:p.memberIds||[],options:memberChipOptions()}],
       function(v){if(!v.name)return false;
         p.name=v.name;p.description=v.description;p.status=v.status;
-        p.startAt=v.startAt;p.endAt=v.endAt;
+        p.startAt=v.startAt;p.endAt=v.endAt;p.memberIds=v.memberIds;
         touch();renderAll();toast("บันทึกแล้ว");return true;});
     return;
   }
@@ -1841,10 +1861,11 @@ $("add-project").addEventListener("click",function(){
     {key:"name",label:"ชื่อโครงการ",type:"text",value:""},
     {key:"description",label:"รายละเอียด",type:"textarea",value:""},
     {key:"startAt",label:"วันที่เริ่ม",type:"date",value:""},
-    {key:"endAt",label:"กำหนดสิ้นสุด",type:"date",value:""}],
+    {key:"endAt",label:"กำหนดสิ้นสุด",type:"date",value:""},
+    {key:"memberIds",label:"ผู้เกี่ยวข้อง",type:"chips",value:[],options:memberChipOptions()}],
     function(v){if(!v.name)return false;
       DB.projects.push({id:uid(),name:v.name,description:v.description,status:"active",
-        startAt:v.startAt,endAt:v.endAt,archived:false});
+        startAt:v.startAt,endAt:v.endAt,memberIds:v.memberIds,archived:false});
       touch();renderAll();toast("เพิ่มโครงการแล้ว");return true;});});
 $("cl-age").addEventListener("change",renderSettings);
 $("cl-done").addEventListener("click",function(){
@@ -1961,7 +1982,7 @@ function rebuild(rows){
       active:r.active!==false};});
   db.projects=(rows.projects||[]).map(function(p){
     return {id:p.id,name:p.name,description:p.description||"",status:p.status||"active",
-      startAt:p.start_at||"",endAt:p.end_at||"",archived:!!p.archived};});
+      startAt:p.start_at||"",endAt:p.end_at||"",memberIds:p.member_ids||[],archived:!!p.archived};});
   var upMap={};
   (rows.updates||[]).forEach(function(u){
     (upMap[u.task_id]=upMap[u.task_id]||[]).push(
