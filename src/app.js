@@ -1487,8 +1487,10 @@ function renderPrint(){
       esc(STREP[t.status])+"</span></td>";
   }
   function whoCell(t){
-    var c=collabs(t).map(memberShort).join(", ");
-    return "<td>"+esc(memberLabel(t.ownerId))+(c?' <span class="hp">+ '+esc(c)+"</span>":"")+"</td>";
+    var c=collabs(t).map(memberShort);
+    return "<td>"+esc(memberLabel(t.ownerId))+
+      (c.length?"\n"+c.map(function(n){return '<span class="hp">+ '+esc(n)+"</span>";}).join("\n"):"")+
+      "</td>";
   }
   function titleCell(t){
     return "<td>"+esc(t.title)+(t.reportCycle?' <span class="hp">('+esc(CYSHORT[t.reportCycle])+
