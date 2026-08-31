@@ -941,7 +941,7 @@ function isStuck(t){return t.status==="blocked"||t.status==="waiting";}
 var PRIO={high:"สูง",normal:"ปกติ",low:"ต่ำ"};
 /* ความกว้างคอลัมน์คงที่ของตารางในรายงาน — คอลัมน์ชื่อเดียวกันกว้างเท่ากันทุกตาราง
    ให้ขอบคอลัมน์ตรงกันแนวตั้งแม้แต่ละตารางจะมีชุดคอลัมน์ไม่เหมือนกัน */
-var COLW={"งาน":210,"ผู้รับผิดชอบ":195,"รับมาจาก":195,"กำหนดส่ง":85,"วันเวลาที่รับ":105,
+var COLW={"งาน":210,"ผู้รับผิดชอบ":195,"รับมาจาก":195,"กำหนดส่ง":85,"วันที่รับ":110,
   "รับเมื่อ":80,"ปิดเมื่อ":80,"เลยมาแล้ว":90,"ติดตั้งแต่":85,"สถานะตอนนี้":125};
 var CYCLE={"":"ไม่ต้องรายงาน",weekly:"ทุกสัปดาห์",biweekly:"ทุก 2 สัปดาห์",monthly:"ทุกเดือน"};
 var CYSHORT={weekly:"รายงานทุกสัปดาห์",biweekly:"รายงานทุก 2 สัปดาห์",monthly:"รายงานทุกเดือน"};
@@ -2468,9 +2468,9 @@ function renderPrint(){
       return [titleCell(t),whoCell(t),'<td class="n">'+fmtD(lastActivity(t))+"</td>",
         "<td>"+(u?esc(u.message):"—")+"</td>"];})+"</section>";
   h+="<section><h3>งานใหม่ที่รับเข้ามา</h3>"+tally(fresh)+
-    table(fresh,["งาน","ผู้รับผิดชอบ","รับมาจาก","วันเวลาที่รับ","สถานะตอนนี้"],function(t){
+    table(fresh,["งาน","ผู้รับผิดชอบ","รับมาจาก","วันที่รับ","สถานะตอนนี้"],function(t){
       return [titleCell(t),whoCell(t),"<td>"+esc(reqName(t.requesterId)||"—")+"</td>",
-        '<td class="n">'+fmtD(dOf(t.receivedAt))+(tOf(t.receivedAt)?" "+tOf(t.receivedAt):"")+"</td>",
+        '<td class="n">'+fmtDY(t.receivedAt)+"</td>",
         stCell(t)];})+"</section>";
   if(late.length)h+="<section><h3>เลยกำหนด</h3>"+
     table(late,["งาน","ผู้รับผิดชอบ","กำหนดส่ง","เลยมาแล้ว"],function(t){
