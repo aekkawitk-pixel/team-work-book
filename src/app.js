@@ -14,6 +14,10 @@ var STREP={received:"ยังไม่เริ่ม",in_progress:"กำล�
 var STSYM={received:"○",in_progress:"◐",waiting:"⋯",blocked:"!",completed:"✓",paused:"‖"};
 function isStuck(t){return t.status==="blocked"||t.status==="waiting";}
 var PRIO={high:"สูง",normal:"ปกติ",low:"ต่ำ"};
+/* ความกว้างคอลัมน์คงที่ของตารางในรายงาน — คอลัมน์ชื่อเดียวกันกว้างเท่ากันทุกตาราง
+   ให้ขอบคอลัมน์ตรงกันแนวตั้งแม้แต่ละตารางจะมีชุดคอลัมน์ไม่เหมือนกัน */
+var COLW={"งาน":220,"ผู้รับผิดชอบ":150,"รับมาจาก":150,"กำหนดส่ง":90,"วันเวลาที่รับ":110,
+  "รับเมื่อ":85,"ปิดเมื่อ":85,"เลยมาแล้ว":95,"ติดตั้งแต่":90,"สถานะตอนนี้":130};
 var CYCLE={"":"ไม่ต้องรายงาน",weekly:"ทุกสัปดาห์",biweekly:"ทุก 2 สัปดาห์",monthly:"ทุกเดือน"};
 var CYSHORT={weekly:"รายงานทุกสัปดาห์",biweekly:"รายงานทุก 2 สัปดาห์",monthly:"รายงานทุกเดือน"};
 var KEY="teamWorkBook", OLDKEY="workbook.state.v1", SELF="me", QUIET=4;
@@ -1492,7 +1496,10 @@ function renderPrint(){
   }
   function table(arr,head,row){
     if(!arr.length)return '<p class="none">ไม่มีรายการ</p>';
-    return '<div class="tw"><table><thead><tr>'+head.map(function(h){
+    var colgroup="<colgroup>"+head.map(function(h,i){
+      if(i===head.length-1)return "<col>";
+      return '<col style="width:'+(COLW[h]||100)+'px">';}).join("")+"</colgroup>";
+    return '<div class="tw"><table style="table-layout:fixed">'+colgroup+"<thead><tr>"+head.map(function(h){
         return "<th>"+esc(h)+"</th>";}).join("")+"</tr></thead><tbody>"+
       grp(arr).map(function(g){
         return '<tr class="grp-row"><td colspan="'+head.length+'">'+esc(g.name)+" ("+g.items.length+")</td></tr>"+
@@ -1534,8 +1541,8 @@ function renderPrint(){
       return [titleCell(t),whoCell(t),'<td class="n">'+fmtD(lastActivity(t))+"</td>",
         "<td>"+(u?esc(u.message):"—")+"</td>"];})+"</section>";
   h+="<section><h3>งานใหม่ที่รับเข้ามา</h3>"+tally(fresh)+
-    table(fresh,["งาน","รับมาจาก","ผู้รับผิดชอบ","วันเวลาที่รับ","สถานะตอนนี้"],function(t){
-      return [titleCell(t),"<td>"+esc(reqName(t.requesterId)||"—")+"</td>",whoCell(t),
+    table(fresh,["งาน","ผู้รับผิดชอบ","รับมาจาก","วันเวลาที่รับ","สถานะตอนนี้"],function(t){
+      return [titleCell(t),whoCell(t),"<td>"+esc(reqName(t.requesterId)||"—")+"</td>",
         '<td class="n">'+fmtD(dOf(t.receivedAt))+(tOf(t.receivedAt)?" "+tOf(t.receivedAt):"")+"</td>",
         stCell(t)];})+"</section>";
   if(late.length)h+="<section><h3>เลยกำหนด</h3>"+
