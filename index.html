@@ -1446,10 +1446,10 @@ function remember(kind,id){
 /* ==========================================================
    7. UI พื้นฐาน
    ========================================================== */
-function toast(msg){
+function toast(msg,ms){
   var o=document.querySelector(".toast");if(o)o.remove();
   var d=document.createElement("div");d.className="toast";d.textContent=msg;
-  document.body.appendChild(d);setTimeout(function(){d.remove();},2200);
+  document.body.appendChild(d);setTimeout(function(){d.remove();},ms||2200);
 }
 var askCb=null;
 function ask(title,body,yes,cb){
@@ -2697,9 +2697,12 @@ var noteProj="";
 $("note-save").addEventListener("click",function(){
   var txt=$("note-text").value.trim();
   if(!txt){toast("พิมพ์สิ่งที่ทำก่อน");return;}
-  DB.notes.push({id:uid(),date:$("note-date").value||today(),text:txt,projectId:noteProj});
+  var d=$("note-date").value||today();
+  DB.notes.push({id:uid(),date:d,text:txt,projectId:noteProj});
   $("note-text").value="";
-  touch();renderToday();toast("บันทึกแล้ว");
+  touch();renderToday();
+  if(d===today())toast("บันทึกแล้ว");
+  else toast("บันทึกแล้ว ("+fmtD(d)+") — ดูที่ปุ่ม \"ดูทั้งหมด\"",3800);
 });
 
 /* ---- week ---- */
