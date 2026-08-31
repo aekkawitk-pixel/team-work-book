@@ -303,6 +303,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
 .tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .tl li{padding:11px 0;border-bottom:1px dashed var(--line)}
 .tl li:last-child{border-bottom:0}
+.tl li.off{opacity:.55}
 .tl .when{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3)}
 .tl .msg{margin:3px 0 5px;font-size:14px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:13.5px}
@@ -1133,6 +1134,7 @@ function normalize(db){
   db.members.forEach(function(m){m.nickname=m.nickname||"";m.active=m.active!==false;
     m.department=m.department||"";m.position=m.position||"";});
   db.requesters.forEach(function(x){x.active=x.active!==false;x.department=x.department||"";x.position=x.position||"";});
+  db.notes.forEach(function(n){n.done=!!n.done;});
   db.projects.forEach(function(p){p.description=p.description||"";p.status=p.status||"active";
     p.startAt=p.startAt||"";p.endAt=p.endAt||"";p.archived=!!p.archived;
     p.memberIds=Array.isArray(p.memberIds)?p.memberIds:[];});
@@ -1251,7 +1253,7 @@ function rowTask(t){return {id:t.id,owner_id:UID,title:t.title,description:t.des
   report_cycle:t.reportCycle||"",repeat_next:!!t.repeatNext,
   completed_at:t.completedAt||null};}
 function rowNote(n){return {id:n.id,owner_id:UID,note_date:n.date,body:n.text||"",
-  project_id:n.projectId||null};}
+  project_id:n.projectId||null,done:!!n.done};}
 function rowUpdate(u){return {id:u.id,task_id:u.taskId,owner_id:UID,message:u.message||"",
   status:u.status||"",created_at:localISO(u.createdAt)};}
 function flatUpdates(db){
@@ -1896,17 +1898,14 @@ function renderToday(){
     :emptyHTML("วันนี้ไม่มีงานที่ต้องตาม 🎉","งานทุกอย่างอยู่ในแผน",["ดูงานทั้งหมด","goTasks"]);
   var notes=DB.notes.filter(function(n){return n.date===t0;});
   $("today-notes").innerHTML=notes.length?
-    '<ul class="tl card pad">'+notes.map(function(n){
-      return '<li style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">'+
-        '<div class="when">'+fmtD(n.date)+(n.projectId?" · "+esc(projName(n.projectId)):"")+"</div>"+
-        '<div class="msg">'+esc(n.text)+"</div></div>"+
-        '<button class="btn sm gh" data-act="delnote" data-id="'+n.id+'">ลบ</button></li>';
-      }).join("")+"</ul>":"";
+    '<ul class="tl card pad">'+notes.map(noteRow).join("")+"</ul>":"";
 }
 function noteRow(n){
-  return '<li style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">'+
-    '<div class="when">'+fmtD(n.date)+(n.projectId?" · "+esc(projName(n.projectId)):"")+"</div>"+
-    '<div class="msg">'+esc(n.text)+"</div></div>"+
+  return '<li class="'+(n.done?"off":"")+'" style="display:flex;gap:10px;align-items:flex-start"><div style="flex:1">'+
+    '<div class="when">'+fmtD(n.date)+(n.projectId?" · "+esc(projName(n.projectId)):"")+
+      (n.done?" · เสร็จแล้ว":"")+"</div>"+
+    '<div class="msg"'+(n.done?' style="text-decoration:line-through"':"")+">"+esc(n.text)+"</div></div>"+
+    '<button class="btn sm gh" data-act="donenote" data-id="'+n.id+'">'+(n.done?"ยังไม่เสร็จ":"เสร็จแล้ว")+"</button>"+
     '<button class="btn sm gh" data-act="delnote" data-id="'+n.id+'">ลบ</button></li>';
 }
 function renderNotesAll(){
@@ -2600,6 +2599,10 @@ document.addEventListener("click",function(e){
   }
   if(a==="delnote"){DB.notes=DB.notes.filter(function(n){return n.id!==id;});
     touch();renderToday();renderNotesAll();return;}
+  if(a==="donenote"){
+    var nt=byId(DB.notes,id);if(!nt)return;
+    nt.done=!nt.done;touch();renderToday();renderNotesAll();return;
+  }
   /* --- settings --- */
   if(a==="edm"||a==="rmm"){
     var m=byId(DB.members,id);if(!m)return;
@@ -2939,7 +2942,7 @@ function rebuild(rows){
       createdAt:fromISO(t.created_at),updatedAt:fromISO(t.updated_at),
       completedAt:t.completed_at||"",updates:(upMap[t.id]||[])};});
   db.notes=(rows.notes||[]).map(function(n){
-    return {id:n.id,date:n.note_date,text:n.body||"",projectId:n.project_id||""};});
+    return {id:n.id,date:n.note_date,text:n.body||"",projectId:n.project_id||"",done:!!n.done};});
   (rows.weeks||[]).forEach(function(w){
     db.weeks[w.week_start]={plan:w.plan||"",risk:w.risk||""};});
   if(!selfRow&&db.members.length===0){

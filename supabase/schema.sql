@@ -112,6 +112,7 @@ create table public.notes (
   note_date date not null default current_date,
   body text not null default '',
   project_id uuid references public.projects(id) on delete set null,
+  done boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index notes_owner_date on public.notes(owner_id, note_date);
