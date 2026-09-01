@@ -1826,7 +1826,7 @@ function taskDetailKV(t){
     ["ผู้ร่วมงาน",collabs(t).length?esc(collabs(t).map(memberShort).join(", ")):"—"],
     ["โครงการ",esc(projName(t.projectId)||"—")],
     ["รับมาจาก",esc(reqName(t.requesterId)||"—")],
-    ["วันที่รับ",esc(fmtStamp(t.receivedAt))],
+    ["วันที่รับ",esc(fmtDY(dOf(t.receivedAt)))],
     ["กำหนดส่ง",t.dueAt?'<span'+(isLate(t)?' style="color:var(--hot);font-weight:600"':"")+">"+
       esc(fmtDY(t.dueAt))+(isLate(t)?" (เลย "+dayDiff(t.dueAt,today())+" วัน)":"")+"</span>":"—"],
     ["รอบรายงาน",t.reportCycle?esc(CYCLE[t.reportCycle])+
