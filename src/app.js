@@ -1507,8 +1507,8 @@ function renderPrint(){
     if(!t.updates.length)return '<td><span class="none">ยังไม่มีอัปเดต</span></td>';
     if(pf){
       return "<td>"+t.updates.map(function(u){
-        return '<span class="n">'+fmtDY(dOf(u.createdAt))+"</span> "+esc(u.message);
-      }).join("\n")+"</td>";
+        return '<span class="uh">'+fmtDY(dOf(u.createdAt))+"</span>"+esc(u.message);
+      }).join("")+"</td>";
     }
     var u=lastUpdate(t);
     return "<td>"+esc(u.message)+' <span class="n">('+fmtDY(dOf(u.createdAt))+")</span></td>";
