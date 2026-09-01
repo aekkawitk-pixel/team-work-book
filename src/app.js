@@ -883,8 +883,7 @@ function completeTask(id){
 /* ==========================================================
    12. Task detail
    ========================================================== */
-function openDetail(id){
-  var t=byId(DB.tasks,id);if(!t)return;
+function taskDetailKV(t){
   var kv=[
     ["สถานะ",'<span class="pill s-'+t.status+'">'+STATUS[t.status]+"</span>"],
     ["ความสำคัญ",esc(PRIO[t.priority])],
@@ -899,6 +898,11 @@ function openDetail(id){
       (isOpen(t)?' <span class="dim">· รอบถัดไป '+esc(fmtDY(nextReport(t)))+"</span>":""):"—"]
   ];
   if(t.completedAt)kv.push(["ปิดงานเมื่อ",esc(fmtDY(t.completedAt))]);
+  return kv;
+}
+function openDetail(id){
+  var t=byId(DB.tasks,id);if(!t)return;
+  var kv=taskDetailKV(t);
   var h='<div><h2 style="font-size:18px">'+esc(t.title)+"</h2>"+
     (t.description?'<p class="muted" style="margin-top:6px;white-space:pre-wrap">'+esc(t.description)+"</p>":"")+
     "</div>"+
@@ -914,6 +918,7 @@ function openDetail(id){
   $("detail-foot").innerHTML=
     '<button class="btn gh sm" data-act="del" data-id="'+t.id+'">ลบงาน</button>'+
     '<div style="display:flex;gap:8px">'+
+      '<button class="btn gh" data-act="printtask" data-id="'+t.id+'">พิมพ์</button>'+
       '<button class="btn gh" data-act="edit" data-id="'+t.id+'">แก้ไข</button>'+
       (t.status!=="completed"?'<button class="btn gh" data-act="done" data-id="'+t.id+'">เสร็จแล้ว</button>':"")+
       '<button class="btn" data-act="upd" data-id="'+t.id+'">อัปเดต</button>'+
@@ -1460,7 +1465,7 @@ function renderPrintControls(){
     STORDER.map(function(k){return '<option value="'+k+'">'+STATUS[k]+"</option>";}).join("");
 }
 function renderPrint(){
-  $("p-back-proj").hidden=!(sub&&sub.type==="project");
+  $("p-back").hidden=!printReturn;
   var sc=printScope();
   $("p-wk-wrap").hidden=$("p-scope").value!=="week";
   var pf=$("p-proj").value,mf=$("p-member").value,sf=$("p-status").value;
@@ -1583,6 +1588,25 @@ function renderPrint(){
   h+='<div class="sh-foot"><span>สมุดคุมงานทีม</span><span>'+esc(sc.label)+"</span></div>";
   $("print-doc").innerHTML=h;
 }
+/* พิมพ์งานเดียว — จากปุ่ม "พิมพ์" ในหน้าต่างรายละเอียดงาน ใช้ชุดข้อมูลเดียวกับ openDetail() (taskDetailKV) */
+function renderTaskPrint(t){
+  $("p-back").hidden=!printReturn;
+  var kv=taskDetailKV(t);
+  var h='<div class="sh-head"><div><h2>'+esc(t.title)+"</h2>"+
+    (t.description?'<div class="sub" style="white-space:pre-wrap;margin-top:4px">'+esc(t.description)+"</div>":"")+
+    '</div><div class="meta">'+(DB.settings.owner?"ผู้รายงาน: "+esc(DB.settings.owner)+"<br>":"")+
+    "พิมพ์เมื่อ "+fmtDY(today())+"</div></div>";
+  h+='<dl class="kv card pad">'+kv.map(function(x){
+    return "<dt>"+esc(x[0])+"</dt><dd>"+x[1]+"</dd>";}).join("")+"</dl>";
+  h+="<section><h3>ประวัติความคืบหน้า</h3>"+
+    (t.updates.length?'<div style="white-space:pre-wrap">'+t.updates.slice().reverse().map(function(u){
+      return '<span class="uh">'+esc(fmtStamp(u.createdAt))+"</span>"+esc(u.message)+
+        (u.status?' <span class="pill s-'+u.status+'">'+STATUS[u.status]+"</span>":"");
+    }).join("")+"</div>":'<p class="none">ยังไม่มีการอัปเดต</p>')+
+    "</section>";
+  h+='<div class="sh-foot"><span>สมุดคุมงานทีม</span><span>รายละเอียดงาน</span></div>';
+  $("print-doc").innerHTML=h;
+}
 
 /* ==========================================================
    20. ตั้งค่า
@@ -1639,6 +1663,12 @@ function afterWipe(msg){
    21. เรนเดอร์รวม + นำทาง
    ========================================================== */
 var view="today";
+/* จำ view+sub ก่อนเข้าหน้าพิมพ์ (จากปุ่มพิมพ์โครงการ/งาน) เพื่อให้ปุ่ม "← กลับ" พากลับจุดเดิมได้เสมอ */
+var printReturn=null;
+function highlightNavAs(v){
+  Array.prototype.forEach.call($("nav").children,function(b){
+    b.setAttribute("aria-current",b.dataset.go===v?"true":"false");});
+}
 function renderAll(){
   var f=followUps().length,open=DB.tasks.filter(isOpen).length;
   $("bg-today").textContent=f;$("bg-today").className="bg"+(f?" hot":"");
@@ -1668,11 +1698,11 @@ function go(v,keepSub){
 }
 $("nav").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
-  if(b.dataset.go)go(b.dataset.go);
+  if(b.dataset.go){printReturn=null;go(b.dataset.go);}
   else if(b.dataset.more)openOv("ov-more");
 });
 $("ov-more").addEventListener("click",function(e){
-  var b=e.target.closest("[data-go]");if(b)go(b.dataset.go);});
+  var b=e.target.closest("[data-go]");if(b){printReturn=null;go(b.dataset.go);}});
 $("fab").addEventListener("click",function(){openCreate(null);});
 
 /* ==========================================================
@@ -1699,15 +1729,26 @@ document.addEventListener("click",function(e){
   if(a==="back"){sub=null;renderAll();window.scrollTo(0,0);return;}
   if(a==="addinproj"){openCreate({projectId:id});return;}
   if(a==="printproj"){
-    /* keepSub=true — คง sub={type:"project",id} ไว้ เพื่อให้ปุ่ม "← กลับไปหน้าโครงการนี้"
-       และเมนู "โครงการ" ที่ไฮไลต์ค้างไว้ ยังรู้ว่าจะกลับไปโครงการไหน */
-    go("print",true);
+    printReturn={view:"projects",sub:{type:"project",id:id}};
+    go("print");
     $("p-scope").value="open";$("p-proj").value=id;renderPrint();
-    Array.prototype.forEach.call($("nav").children,function(b){
-      b.setAttribute("aria-current",b.dataset.go==="projects"?"true":"false");});
+    highlightNavAs("projects");
     return;
   }
-  if(a==="backproj"){go("projects",true);return;}
+  if(a==="printtask"){
+    var pt=byId(DB.tasks,id);if(!pt)return;
+    printReturn={view:view,sub:sub};
+    closeOv("ov-detail");
+    go("print");
+    renderTaskPrint(pt);
+    highlightNavAs(printReturn.view);
+    return;
+  }
+  if(a==="backprint"){
+    if(!printReturn){go("today");return;}
+    var pr=printReturn;printReturn=null;sub=pr.sub;go(pr.view,true);
+    return;
+  }
   if(a==="goTasks"){go("tasks");return;}
   if(a==="clearf"){
     flt={q:"",status:"open",ownerId:"",projectId:"",priority:"",
