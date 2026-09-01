@@ -2210,7 +2210,10 @@ function renderProjectDetail(){
       return "<dt>"+esc(r[0])+"</dt><dd>"+esc(r[1])+"</dd>";}).join("")+"</dl>";
   }
   $("proj-grid").innerHTML='<div style="grid-column:1/-1">'+
-    '<button class="btn gh sm" data-act="back" style="margin-bottom:14px">← กลับไปหน้าโครงการ</button>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<button class="btn gh sm" data-act="back">← กลับไปหน้าโครงการ</button>'+
+      '<button class="btn gh sm" data-act="printproj" data-id="'+esc(id)+'">พิมพ์รายงานโครงการนี้</button>'+
+    "</div>"+
     '<div class="sec"><h1>'+esc(name)+"</h1>"+
       (p&&p.description?'<p class="muted" style="margin-top:5px">'+esc(p.description)+"</p>":"")+"</div>"+
     '<div class="sec strip">'+st(s.all,"งานทั้งหมด","")+st(s.done,"เสร็จแล้ว","ok")+
@@ -2606,6 +2609,11 @@ document.addEventListener("click",function(e){
   if(a==="project"){sub={type:"project",id:id};renderProjects();window.scrollTo(0,0);return;}
   if(a==="back"){sub=null;renderAll();window.scrollTo(0,0);return;}
   if(a==="addinproj"){openCreate({projectId:id});return;}
+  if(a==="printproj"){
+    sub=null;go("print");
+    $("p-scope").value="open";$("p-proj").value=id;renderPrint();
+    return;
+  }
   if(a==="goTasks"){go("tasks");return;}
   if(a==="clearf"){
     flt={q:"",status:"open",ownerId:"",projectId:"",priority:"",
