@@ -663,7 +663,9 @@ input::placeholder,textarea::placeholder{color:var(--ink-3)}
 
     <!-- ══════════ พิมพ์รายงาน ══════════ -->
     <section id="v-print" hidden>
-      <div class="head sec"><h1>พิมพ์รายงาน</h1><p class="muted">เลือกเงื่อนไข ดูตัวอย่าง แล้วสั่งพิมพ์หรือบันทึกเป็น PDF</p></div>
+      <div class="head sec"><h1>พิมพ์รายงาน</h1><p class="muted">เลือกเงื่อนไข ดูตัวอย่าง แล้วสั่งพิมพ์หรือบันทึกเป็น PDF</p>
+        <button class="btn gh sm" id="p-back-proj" data-act="backproj" hidden style="margin-top:8px">← กลับไปหน้าโครงการนี้</button>
+      </div>
       <div class="print-ctl">
         <div class="fmore">
           <div class="field"><label for="p-scope">ช่วงข้อมูล</label><select id="p-scope">

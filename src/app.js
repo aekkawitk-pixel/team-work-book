@@ -1460,6 +1460,7 @@ function renderPrintControls(){
     STORDER.map(function(k){return '<option value="'+k+'">'+STATUS[k]+"</option>";}).join("");
 }
 function renderPrint(){
+  $("p-back-proj").hidden=!(sub&&sub.type==="project");
   var sc=printScope();
   $("p-wk-wrap").hidden=$("p-scope").value!=="week";
   var pf=$("p-proj").value,mf=$("p-member").value,sf=$("p-status").value;
@@ -1698,10 +1699,15 @@ document.addEventListener("click",function(e){
   if(a==="back"){sub=null;renderAll();window.scrollTo(0,0);return;}
   if(a==="addinproj"){openCreate({projectId:id});return;}
   if(a==="printproj"){
-    sub=null;go("print");
+    /* keepSub=true — คง sub={type:"project",id} ไว้ เพื่อให้ปุ่ม "← กลับไปหน้าโครงการนี้"
+       และเมนู "โครงการ" ที่ไฮไลต์ค้างไว้ ยังรู้ว่าจะกลับไปโครงการไหน */
+    go("print",true);
     $("p-scope").value="open";$("p-proj").value=id;renderPrint();
+    Array.prototype.forEach.call($("nav").children,function(b){
+      b.setAttribute("aria-current",b.dataset.go==="projects"?"true":"false");});
     return;
   }
+  if(a==="backproj"){go("projects",true);return;}
   if(a==="goTasks"){go("tasks");return;}
   if(a==="clearf"){
     flt={q:"",status:"open",ownerId:"",projectId:"",priority:"",
