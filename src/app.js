@@ -1502,6 +1502,17 @@ function renderPrint(){
     return "<td>"+esc(t.title)+(t.reportCycle?' <span class="hp">('+esc(CYSHORT[t.reportCycle])+
       ")</span>":"")+"</td>";
   }
+  /* พิมพ์เฉพาะโครงการ (pf) → โชว์ประวัติอัปเดตครบทุกรายการ ไม่ใช่แค่ล่าสุด */
+  function updatesCell(t){
+    if(!t.updates.length)return '<td><span class="none">ยังไม่มีอัปเดต</span></td>';
+    if(pf){
+      return "<td>"+t.updates.map(function(u){
+        return '<span class="n">'+fmtDY(dOf(u.createdAt))+"</span> "+esc(u.message);
+      }).join("\n")+"</td>";
+    }
+    var u=lastUpdate(t);
+    return "<td>"+esc(u.message)+' <span class="n">('+fmtDY(dOf(u.createdAt))+")</span></td>";
+  }
   function table(arr,head,row){
     if(!arr.length)return '<p class="none">ไม่มีรายการ</p>';
     var colgroup="<colgroup>"+head.map(function(h,i){
@@ -1534,20 +1545,22 @@ function renderPrint(){
     '<div class="kpi"><b>'+blocked.length+"</b><span>ติดปัญหา</span></div>"+
     '<div class="kpi"><b>'+fresh.length+"</b><span>งานใหม่</span></div>"+
     '<div class="kpi"><b>'+late.length+"</b><span>เลยกำหนด</span></div></div>";
-  h+="<section><h3>เสร็จแล้ว</h3>"+table(done,["งาน","ผู้รับผิดชอบ","รับเมื่อ","ปิดเมื่อ"],
-    function(t){return [titleCell(t),whoCell(t),'<td class="n">'+fmtD(dOf(t.receivedAt))+"</td>",
-      '<td class="n">'+fmtD(t.completedAt)+"</td>"];})+"</section>";
+  h+="<section><h3>เสร็จแล้ว</h3>"+table(done,
+    pf?["งาน","ผู้รับผิดชอบ","รับเมื่อ","ปิดเมื่อ","ประวัติอัปเดต"]:["งาน","ผู้รับผิดชอบ","รับเมื่อ","ปิดเมื่อ"],
+    function(t){
+      var row=[titleCell(t),whoCell(t),'<td class="n">'+fmtD(dOf(t.receivedAt))+"</td>",
+        '<td class="n">'+fmtD(t.completedAt)+"</td>"];
+      if(pf)row.push(updatesCell(t));
+      return row;})+"</section>";
   h+="<section><h3>กำลังดำเนินการ</h3>"+table(doing.slice().sort(sortTasks),
-    ["งาน","ผู้รับผิดชอบ","กำหนดส่ง","อัปเดตล่าสุด"],function(t){
-      var u=lastUpdate(t);
+    ["งาน","ผู้รับผิดชอบ","กำหนดส่ง",pf?"ประวัติอัปเดต":"อัปเดตล่าสุด"],function(t){
       return [titleCell(t),whoCell(t),
         '<td class="n'+(isLate(t)?" late":"")+'">'+(t.dueAt?fmtD(t.dueAt):"—")+"</td>",
-        "<td>"+(u?esc(u.message)+' <span class="n">('+fmtDY(dOf(u.createdAt))+")</span>":
-          '<span class="none">ยังไม่มีอัปเดต</span>')+"</td>"];})+"</section>";
-  h+="<section><h3>ติดปัญหา / รออยู่</h3>"+table(blocked,["งาน","ผู้รับผิดชอบ","ติดตั้งแต่","ประเด็น"],
-    function(t){var u=lastUpdate(t);
+        updatesCell(t)];})+"</section>";
+  h+="<section><h3>ติดปัญหา / รออยู่</h3>"+table(blocked,["งาน","ผู้รับผิดชอบ","ติดตั้งแต่",pf?"ประวัติอัปเดต":"ประเด็น"],
+    function(t){
       return [titleCell(t),whoCell(t),'<td class="n">'+fmtD(lastActivity(t))+"</td>",
-        "<td>"+(u?esc(u.message):"—")+"</td>"];})+"</section>";
+        updatesCell(t)];})+"</section>";
   h+="<section><h3>งานใหม่ที่รับเข้ามา</h3>"+tally(fresh)+
     table(fresh,["งาน","ผู้รับผิดชอบ","รับมาจาก","วันที่รับ","สถานะตอนนี้"],function(t){
       return [titleCell(t),whoCell(t),"<td>"+esc(reqName(t.requesterId)||"—")+"</td>",
