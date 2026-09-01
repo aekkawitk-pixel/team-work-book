@@ -1506,7 +1506,7 @@ function renderPrint(){
   function updatesCell(t){
     if(!t.updates.length)return '<td><span class="none">ยังไม่มีอัปเดต</span></td>';
     if(pf){
-      return "<td>"+t.updates.map(function(u){
+      return "<td>"+t.updates.slice().reverse().map(function(u){
         return '<span class="uh">'+fmtDY(dOf(u.createdAt))+"</span>"+esc(u.message);
       }).join("")+"</td>";
     }
